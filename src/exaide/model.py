@@ -27,8 +27,11 @@ class TextCompareModel:
     def get_similarity_ratio(self) -> float:
         return self._compare_model.ratio()
 
-    def get_text_from_file(self, filepath: Path):
-        with open(filepath, "r", encoding="utf-8") as fh:
-            text = fh.read()
+    def get_text_from_file(self, filepath_original: Path, filepath_modified: Path):
+        with open(filepath_original, "r", encoding="utf-8") as fh:
+            text_original = fh.read()
 
-        return text
+        with open(filepath_modified, "r", encoding="utf-8") as fh:
+            text_modified = fh.read()
+
+        self.reset_comparing_text(text_original, text_modified)

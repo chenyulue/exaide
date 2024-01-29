@@ -11,5 +11,9 @@ def test_compare_widget(root):
         a, b = cmp.get_comparing_text()
         m._compare_model.set_seqs(a, b)
         cmp.set_comparing_text(a, b, m.compare())
+
+    def opening_file(event):
+        cmp._sctext_result.insert("end", event.widget.filepath)
     cmp.bind("<<Comparing>>", comparing)
+    cmp.bind("<<OpenFile>>", opening_file)
     root.mainloop()

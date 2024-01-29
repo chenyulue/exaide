@@ -153,4 +153,11 @@ class ComparisonFrame(ttk.Frame):
         self.event_generate("<<Comparing>>")
 
     def _open_file(self, title):
+        file_path = filedialog.askopenfilename(
+            title=title,
+            parent=self,
+            filetypes=[("文本文档", ".txt"), ("所有文件", "*")],
+            defaultextension=".txt",
+        )
+        self.filepath = file_path
         self.event_generate("<<OpenFile>>")
