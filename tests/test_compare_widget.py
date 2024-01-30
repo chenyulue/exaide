@@ -15,5 +15,4 @@ def test_compare_widget(root):
     def opening_file(event):
         cmp._sctext_result.insert("end", event.widget.filepath)
     cmp.bind("<<Comparing>>", comparing)
-    cmp.bind("<<OpenFile>>", opening_file)
     root.mainloop()

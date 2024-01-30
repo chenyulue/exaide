@@ -2,6 +2,9 @@ import ttkbootstrap as ttk
 import ttkbootstrap.constants as tc
 from ttkbootstrap.scrolled import ScrolledText
 from tkinter import filedialog
+from ttkbootstrap.dialogs.dialogs import Messagebox
+
+import chardet
 
 
 class ComparisonFrame(ttk.Frame):
@@ -155,9 +158,15 @@ class ComparisonFrame(ttk.Frame):
     def _open_file(self, title):
         file_path = filedialog.askopenfilename(
             title=title,
-            parent=self,
+            # parent=self,
             filetypes=[("文本文档", ".txt"), ("所有文件", "*")],
             defaultextension=".txt",
         )
-        self.filepath = file_path
-        self.event_generate("<<OpenFile>>")
+
+        with open(file_path, "rb") as f:
+            read_bytes = f.read()
+            encoding = chardet.detect(read_bytes)["encoding"]
+            if title == "请选择原始文本":
+                self.original_text = read_bytes.decode(encoding)
+            else:
+                self.modified_text = read_bytes.decode(encoding)
