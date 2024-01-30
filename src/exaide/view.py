@@ -166,7 +166,15 @@ class ComparisonFrame(ttk.Frame):
         with open(file_path, "rb") as f:
             read_bytes = f.read()
             encoding = chardet.detect(read_bytes)["encoding"]
-            if title == "请选择原始文本":
-                self.original_text = read_bytes.decode(encoding)
-            else:
-                self.modified_text = read_bytes.decode(encoding)
+            try:
+                if title == "请选择原始文本":
+                    self.original_text = read_bytes.decode(encoding)
+                else:
+                    self.modified_text = read_bytes.decode(encoding)
+            except (UnicodeDecodeError, UnicodeError):
+                Messagebox.show_error(
+                    message=(f"检测到文本文档的编码格式为{encoding}，请确认\n"
+                             f"实际编码格式是否匹配{encoding}。若不匹配，请\n"
+                              "适当增加文本文档中字符数量以提高检测准确率。"),
+                    title="文本编码错误",
+                )
