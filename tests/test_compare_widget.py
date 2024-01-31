@@ -9,7 +9,7 @@ def test_compare_widget(root):
 
     def comparing(*_):
         a, b = cmp.get_comparing_text()
-        m._compare_model.set_seqs(a, b)
+        m.reset_comparing_text(a, b)
         cmp.set_comparing_text(a, b, m.compare())
 
     def opening_file(event):
