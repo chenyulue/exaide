@@ -31,40 +31,34 @@ class TextCompareModel(difflib.SequenceMatcher):
         return self.ratio()
 
 
-class DescriptionModel:
+class SearchModel:
     def __init__(
         self,
-        description: Sequence[str],
-        figures: Sequence[str],
+        content: Sequence[str],
         pattern: Sequence[str],
-        phrases: list[str],
     ):
-        self._description = description
-        self._figures = figures
-        self._phrases = phrases
+        self._content = content
         self._pattern = pattern
 
-    def find_fig_numbers(self):
-        fig_nums_in_description = list()
-        fig_nums_in_figures = list()
+    def search(self):
+        result = list()
         pattern = re.compile(self._pattern)
 
         start = 0
-        while start < len(self._description):
-            match = pattern.search(self._description, start)
-            if match is None:
-                break
+        match = pattern.search(self._content, start)
+        while match is not None:
             a, b = match.span()
-            fig_nums_in_description.append((self._description[a:b], a, b))
+            result.append((self._content[a:b], a, b))
             start = b
 
-        start = 0
-        while start < len(self._figures):
-            match = pattern.search(self._figures, start)
-            if match is None:
-                break
-            a, b = match.span()
-            fig_nums_in_figures.append((self._figures[a:b], a, b))
-            start = b
+        return result
 
-        return fig_nums_in_description, fig_nums_in_figures
+class SearchFigureNumber(SearchModel):
+    def __init__(self, content: Sequence[str]):
+        pattern = "图[0-9]+"
+        super(self).__init__(content, pattern)
+
+class SearchSensitiveWords(SearchModel):
+    def __init__(self, content: Sequence[str], words: set[str]):
+        pattern = '|'.join(words)
+        super(self).__init__(content, pattern)
