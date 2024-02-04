@@ -44,12 +44,11 @@ class SearchModel:
         result = list()
         pattern = re.compile(self._pattern)
 
-        start = 0
-        match = pattern.search(self._content, start)
+        match = pattern.search(self._content, 0)
         while match is not None:
-            a, b = match.span()
-            result.append((self._content[a:b], a, b))
-            start = b
+            start, end = match.span()
+            result.append((self._content[start:end], start, end))
+            match = pattern.search(self._content, end)
 
         return result
 
