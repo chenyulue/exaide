@@ -21,25 +21,25 @@ class ComparisonFrame(ttk.Frame):
         self.columnconfigure(3, weight=1)
 
         label = "{}:\n请输入或[Ctrl+V]粘贴或点击[导入]按钮导入纯文本"
-        label_left = ttk.Label(self, text=label.format("原始文本"))
+        label_left = ttk.Label(self, text=label.format("修改文本"))
         label_left.grid(
             row=0,
             column=0,
             sticky=tc.W,
         )
-        label_right = ttk.Label(self, text=label.format("修改文本"))
+        label_right = ttk.Label(self, text=label.format("原始文本"))
         label_right.grid(row=0, column=3, sticky=tc.W)
 
         self._btn_left = ttk.Button(
             self,
             text="导入",
-            command=lambda title="请选择原始文本": self._open_file(title),
+            command=lambda title="请选择修改文本": self._open_file(title),
         )
         self._btn_left.grid(row=0, column=1, sticky=tc.E)
         self._btn_right = ttk.Button(
             self,
             text="导入",
-            command=lambda title="请选择修改文本": self._open_file(title),
+            command=lambda title="请选择原始文本": self._open_file(title),
         )
         self._btn_right.grid(row=0, column=4, sticky=tc.E)
 
@@ -55,18 +55,18 @@ class ComparisonFrame(ttk.Frame):
         )
         self._btn_cmp.grid(row=1, column=2, padx=3, sticky=tc.EW)
 
-        label_result = ttk.Label(self, text="修改对照:")
-        label_result.grid(row=2, column=0, sticky=tc.W)
+        self._label_result = ttk.Label(self, text="修改对照:")
+        self._label_result.grid(row=2, column=0, sticky=tc.W)
         self._sctext_result = ScrolledText(self, autohide=True, height=10, wrap="word")
         self._sctext_result.grid(row=3, column=0, columnspan=5, sticky=tc.NSEW)
 
     @property
     def original_text(self):
-        return self._sctext_left.get("1.0", "end")
+        return self._sctext_right.get("1.0", "end")
 
     @property
     def modified_text(self):
-        return self._sctext_right.get("1.0", "end")
+        return self._sctext_left.get("1.0", "end")
 
     @property
     def comparison_result(self):
@@ -74,13 +74,13 @@ class ComparisonFrame(ttk.Frame):
 
     @original_text.setter
     def original_text(self, text):
-        self._sctext_left.delete("1.0", "end")
-        self._sctext_left.insert("1.0", text)
+        self._sctext_right.delete("1.0", "end")
+        self._sctext_right.insert("1.0", text)
 
     @modified_text.setter
     def modified_text(self, text):
-        self._sctext_right.delete("1.0", "end")
-        self._sctext_right.insert("1.0", text)
+        self._sctext_left.delete("1.0", "end")
+        self._sctext_left.insert("1.0", text)
 
     @comparison_result.setter
     def comparison_result(self, text):
@@ -103,12 +103,12 @@ class ComparisonFrame(ttk.Frame):
         for tag, i1, i2, j1, j2 in cmp_contents:
             match tag:
                 case "equal":
-                    self._sctext_left.insert(
+                    self._sctext_right.insert(
                         "end",
                         text_original[i1:i2],
                         ("equal",),
                     )
-                    self._sctext_right.insert(
+                    self._sctext_left.insert(
                         "end",
                         text_modified[j1:j2],
                         ("equal",),
@@ -119,8 +119,8 @@ class ComparisonFrame(ttk.Frame):
                         ("equal",),
                     )
                 case _:
-                    self._sctext_left.insert("end", text_original[i1:i2], ("original",))
-                    self._sctext_right.insert(
+                    self._sctext_right.insert("end", text_original[i1:i2], ("original",))
+                    self._sctext_left.insert(
                         "end", text_modified[j1:j2], ("modified",)
                     )
                     self._sctext_result.insert(
@@ -131,8 +131,8 @@ class ComparisonFrame(ttk.Frame):
                     )
 
         origin_color, modify_color = "red", "blue"
-        self._sctext_left.tag_configure("original", foreground=origin_color)
-        self._sctext_right.tag_configure("modified", foreground=modify_color)
+        self._sctext_right.tag_configure("original", foreground=origin_color)
+        self._sctext_left.tag_configure("modified", foreground=modify_color)
 
         for tag in (
             "replace-original",
