@@ -6,6 +6,35 @@ from ttkbootstrap.dialogs.dialogs import Messagebox
 
 import chardet
 
+class MainFrame(ttk.Frame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, padding=10, **kwargs)
+        self.pack(fill="both", expand=True)
+        
+        label = ttk.Label(self, text="待查案件:")
+        label.pack(fill="x", expand=True, padx=5, pady=5)
+
+        self.app_number = ttk.StringVar()
+        appnum_entry = ttk.Entry(self, textvariable=self.app_number)
+        appnum_entry.pack(fill="x", expand=True, padx=5, pady=5)
+
+        load_btn = ttk.Button(self, text="导入")
+        load_btn.pack(anchor="e", padx=5, pady=5)
+
+        utility_frm = ttk.LabelFrame(self, text="实用工具")
+        utility_frm.pack(fill="both", expand=True)
+
+        formal_defect_btn = ttk.Button(utility_frm, text="形式缺陷查找", bootstyle="primary-link")
+        formal_defect_btn.pack(anchor="w", padx=5, pady=5)
+        comparison_btn = ttk.Button(utility_frm, text="文本比较器", bootstyle="primary-link")
+        comparison_btn.pack(anchor="w", padx=5, pady=5)
+        period_check_btn = ttk.Button(utility_frm, text="审查周期查看", bootstyle="primary-link")
+        period_check_btn.pack(anchor="w", padx=5, pady=5)
+        case_closing_btn = ttk.Button(utility_frm, text="当月结案数据", bootstyle="primary-link")
+        case_closing_btn.pack(anchor="w", padx=5, pady=5)
+        
+        
+
 
 class ComparisonFrame(ttk.Frame):
     def __init__(self, master, **kwargs):
