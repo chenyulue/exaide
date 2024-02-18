@@ -1,21 +1,19 @@
 import difflib
 import re
-from typing import Sequence
 
+from ._type import CmpResult
 
 class TextCompareModel(difflib.SequenceMatcher):
     def __init__(
         self,
-        text_original: Sequence[str],
-        text_modified: Sequence[str],
-        *args,
-        **kwargs,
+        text_original: str,
+        text_modified: str,
     ) -> None:
-        super().__init__(a=text_original, b=text_modified, *args, **kwargs)
+        super().__init__(a=text_original, b=text_modified)
         self._text_original = text_original
         self._text_modified = text_modified
 
-    def reset_comparing_text(self, text_original, text_modified):
+    def reset_comparing_text(self, text_original:str, text_modified:str) -> None:
         self.set_seqs(
             a=text_original,
             b=text_modified,
@@ -23,7 +21,7 @@ class TextCompareModel(difflib.SequenceMatcher):
         self._text_original = text_original
         self._text_modified = text_modified
 
-    def compare(self) -> list[tuple[str, int, int, int, int]]:
+    def compare(self) -> CmpResult:
         cmp_result = self.get_opcodes()
         return cmp_result
 
