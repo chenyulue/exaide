@@ -1,8 +1,10 @@
 import difflib
 import re
 
-from ._type import CmpResult
+from ._type import CompareResults, SearchResults
 
+
+# text comparison model
 class TextCompareModel(difflib.SequenceMatcher):
     def __init__(
         self,
@@ -13,7 +15,7 @@ class TextCompareModel(difflib.SequenceMatcher):
         self._text_original = text_original
         self._text_modified = text_modified
 
-    def reset_comparing_text(self, text_original:str, text_modified:str) -> None:
+    def reset_comparing_text(self, text_original: str, text_modified: str) -> None:
         self.set_seqs(
             a=text_original,
             b=text_modified,
@@ -21,41 +23,41 @@ class TextCompareModel(difflib.SequenceMatcher):
         self._text_original = text_original
         self._text_modified = text_modified
 
-    def compare(self) -> CmpResult:
-        cmp_result = self.get_opcodes()
-        return cmp_result
+    def compare(self) -> CompareResults:
+        cmp_results = self.get_opcodes()
+        return cmp_results
 
     def get_similarity_ratio(self) -> float:
         return self.ratio()
 
 
+# text search model
 class SearchModel:
     def __init__(
         self,
-        content: Sequence[str],
-        pattern: Sequence[str],
+        content: str,
+        pattern: str,
     ):
         self._content = content
         self._pattern = pattern
 
-    def search(self):
-        result = list()
+    def search(self) -> SearchResults:
         pattern = re.compile(self._pattern)
 
         match = pattern.search(self._content, 0)
         while match is not None:
             start, end = match.span()
-            result.append((self._content[start:end], start, end))
+            yield (self._content[start:end], start, end)
             match = pattern.search(self._content, end)
 
-        return result
 
 class SearchFigureNumber(SearchModel):
-    def __init__(self, content: Sequence[str]):
+    def __init__(self, content: str):
         pattern = "图[0-9]+"
-        super(self).__init__(content, pattern)
+        super().__init__(content, pattern)
+
 
 class SearchSensitiveWords(SearchModel):
-    def __init__(self, content: Sequence[str], words: set[str]):
-        pattern = '|'.join(words)
-        super(self).__init__(content, pattern)
+    def __init__(self, content: str, words: set[str]):
+        pattern = "|".join(words)
+        super().__init__(content, pattern)

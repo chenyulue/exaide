@@ -1,9 +1,9 @@
-from typing import Literal, TypeAlias
+from typing import TypeAlias, Iterator
+    
+AIndex: TypeAlias = int
+BIndex: TypeAlias = int
+Tag: TypeAlias = str
 
-Tag: TypeAlias = Literal["replace", "delete", "insert", "equal"]
-AIndexStart: TypeAlias = int
-AIndexEnd: TypeAlias = int
-BIndexStart: TypeAlias = int
-BIndexEnd: TypeAlias = int
+CompareResults: TypeAlias = list[tuple[Tag, AIndex, AIndex, BIndex, BIndex]]
 
-CmpResult: TypeAlias = list[tuple[Tag, AIndexStart, BIndexStart, BIndexEnd]]
+SearchResults: TypeAlias = Iterator[tuple[str, int, int]]
