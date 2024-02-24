@@ -13,4 +13,4 @@ def test_search(search_model):
     from collections.abc import Iterator
     results = search_model.search()
     assert isinstance(results, Iterator)
-    assert list(results) == [("ell", 1, 4), ("ell", 14, 17)]
+    assert list(results) == [m.SearchResult("ell", 1, 4), m.SearchResult("ell", 14, 17)]

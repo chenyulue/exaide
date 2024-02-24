@@ -1,7 +1,7 @@
 import difflib
 import re
 
-from ._type import CompareResults, SearchResults
+from ._type import CompareResults, Iterator, SearchResult
 
 
 # text comparison model
@@ -12,16 +12,16 @@ class TextCompareModel(difflib.SequenceMatcher):
         text_modified: str,
     ) -> None:
         super().__init__(a=text_original, b=text_modified)
-        self._text_original = text_original
-        self._text_modified = text_modified
+        self.text_original = text_original
+        self.text_modified = text_modified
 
     def reset_comparing_text(self, text_original: str, text_modified: str) -> None:
         self.set_seqs(
             a=text_original,
             b=text_modified,
         )
-        self._text_original = text_original
-        self._text_modified = text_modified
+        self.text_original = text_original
+        self.text_modified = text_modified
 
     def compare(self) -> CompareResults:
         cmp_results = self.get_opcodes()
@@ -41,13 +41,13 @@ class SearchModel:
         self._content = content
         self._pattern = pattern
 
-    def search(self) -> SearchResults:
+    def search(self) -> Iterator[SearchResult]:
         pattern = re.compile(self._pattern)
 
         match = pattern.search(self._content, 0)
         while match is not None:
             start, end = match.span()
-            yield (self._content[start:end], start, end)
+            yield SearchResult(match=self._content[start:end], start=start, end=end)
             match = pattern.search(self._content, end)
 
 
