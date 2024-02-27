@@ -1,7 +1,8 @@
 import difflib
 import re
+from collections import defaultdict
 
-from typing import Iterator, NamedTuple
+from typing import Iterator, NamedTuple, TypeAlias
 
 
 # text comparison model
@@ -43,7 +44,7 @@ class SearchModel:
         self,
         content: str,
         pattern: str,
-        *kwargs: re._FlagsType
+        *kwargs: re.RegexFlag
     ):
         self._content = content
         self._pattern = re.compile(pattern, *kwargs)
@@ -57,10 +58,7 @@ class SearchModel:
 
 
 # Model that represents a description of a patent
-class FigureNumbers(NamedTuple):
-    figs: set[str]
-    positions: list[tuple[str, int, int]]
-    
+FigureNumbers: TypeAlias = defaultdict[str, list[tuple[int, int]]]
 class DescriptionModel:
     def __init__(self, description: str, figure_numbers: str | None = None):
         self.description = description
@@ -76,11 +74,18 @@ class DescriptionModel:
         assert last_para_num == len(para_nums)
         return last_para_num
 
-    def search_figure_numbers(self):
+    def search_figure_numbers(self) -> FigureNumbers:
         search_mod = SearchModel(self.description, self.fig_num_pattern)
+        fig_nums = defaultdict(list)
+        seps_pattern = "[和至或,、，-]"
         for fig_match, start, end in search_mod.search():
             if self._contains_multinumbers(fig_match):
-                pass
+                for sub_fig in re.split(seps_pattern, fig_match.group(1)):
+                    fig_nums["图"+sub_fig].append((start, end))
+                continue
+            fig_nums[fig_match.group(0)].append((start, end))
+
+        return fig_nums
             
     @staticmethod        
     def _contains_multinumbers(match: re.Match[str]) -> bool:
