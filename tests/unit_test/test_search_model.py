@@ -7,7 +7,7 @@ def search_model():
 
 def test_new_model(search_model):
     assert search_model._content == "hello world! hello people!"
-    assert search_model._pattern == "el+"
+    assert search_model._pattern.pattern == "el+"
 
 def test_search(search_model):
     from collections.abc import Iterator
