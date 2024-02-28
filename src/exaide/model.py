@@ -40,12 +40,7 @@ class SearchResult(NamedTuple):
 
 
 class SearchModel:
-    def __init__(
-        self,
-        content: str,
-        pattern: str,
-        *kwargs: re.RegexFlag
-    ):
+    def __init__(self, content: str, pattern: str, *kwargs: re.RegexFlag):
         self._content = content
         self._pattern = re.compile(pattern, *kwargs)
 
@@ -59,13 +54,21 @@ class SearchModel:
 
 # Model that represents a description of a patent
 FigureNumbers: TypeAlias = defaultdict[str, list[tuple[int, int]]]
+SensitiveWords: TypeAlias = defaultdict[str, list[tuple[int, int]]]
+
+
 class DescriptionModel:
-    def __init__(self, description: str, figure_numbers: str | None = None):
+    def __init__(
+        self,
+        description: str,
+        sensitive_words: list[str],
+        figure_numbers: str | None = None,
+    ):
         self.description = description
         self.figure_numbers = "" if figure_numbers is None else figure_numbers
-        self.fig_num_pattern = (
-            r"图([0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?([和至或,、，-][0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?)*)"
-        )
+        self.sensitive_words = sensitive_words
+
+        self.fig_num_pattern = r"图([0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?([和至或,、，-][0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?)*)"
 
     def count_paragraphs(self):
         pattern = re.compile(r"^\[[0-9]{4}\]", flags=re.MULTILINE)
@@ -82,19 +85,27 @@ class DescriptionModel:
         seps_pattern = "[和至或,、，]"
         if re.search(r"图[0-9a-zA-Z'()]+-[0-9a-zA-Z'()]+", self.figure_numbers) is None:
             seps_pattern = seps_pattern[:-1] + "-]"
-            
+
         for fig_match, start, end in search_mod.search():
             if self._contains_multinumbers(fig_match):
                 for sub_fig in re.split(seps_pattern, fig_match.group(1)):
-                    fig_nums["图"+sub_fig].append((start, end))
+                    fig_nums["图" + sub_fig].append((start, end))
                 continue
             fig_nums[fig_match.group(0)].append((start, end))
 
         return fig_nums
-            
-    @staticmethod        
+
+    def search_sensitive_words(self) -> SensitiveWords:
+        search_mod = SearchModel(self.description, "|".join(self.sensitive_words))
+        sensitive_words = defaultdict(list)
+
+        for word_match, start, end in search_mod.search():
+            sensitive_words[word_match.group(0)].append((start, end))
+
+        return sensitive_words
+
+    @staticmethod
     def _contains_multinumbers(match: re.Match[str]) -> bool:
         if match.groups != () and match.groups()[-1] is not None:
             return True
         return False
-            
