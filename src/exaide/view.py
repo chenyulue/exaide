@@ -6,12 +6,13 @@ from ttkbootstrap.dialogs.dialogs import Messagebox
 
 import chardet
 
+
 class MainFrame(ttk.Frame):
     def __init__(self, master, **kwargs):
         super().__init__(master, padding=10, **kwargs)
         self.pack(fill="both", expand=True)
-        
-        label = ttk.Label(self, text="待查案件:")
+
+        label = ttk.Label(self, text="案件申请号:")
         label.pack(fill="x", expand=True, padx=5, pady=5)
 
         self.app_number = ttk.StringVar()
@@ -24,16 +25,34 @@ class MainFrame(ttk.Frame):
         utility_frm = ttk.LabelFrame(self, text="实用工具")
         utility_frm.pack(fill="both", expand=True)
 
-        formal_defect_btn = ttk.Button(utility_frm, text="形式缺陷查找", bootstyle="primary-link")
+        formal_defect_btn = ttk.Button(
+            utility_frm, text="形式缺陷查找", bootstyle="primary-link"
+        )
         formal_defect_btn.pack(anchor="w", padx=5, pady=5)
-        comparison_btn = ttk.Button(utility_frm, text="文本比较器", bootstyle="primary-link")
+        comparison_btn = ttk.Button(
+            utility_frm, text="文本比较器", bootstyle="primary-link"
+        )
         comparison_btn.pack(anchor="w", padx=5, pady=5)
-        period_check_btn = ttk.Button(utility_frm, text="审查周期查看", bootstyle="primary-link")
+        period_check_btn = ttk.Button(
+            utility_frm, text="审查周期查看", bootstyle="primary-link"
+        )
         period_check_btn.pack(anchor="w", padx=5, pady=5)
-        case_closing_btn = ttk.Button(utility_frm, text="当月结案数据", bootstyle="primary-link")
+        case_closing_btn = ttk.Button(
+            utility_frm, text="当月结案数据", bootstyle="primary-link"
+        )
         case_closing_btn.pack(anchor="w", padx=5, pady=5)
-        
-        
+
+
+class FormalDefectFrame(ttk.Frame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, padding=10, **kwargs)
+        self.pack(fill="both", expand=True)
+
+        self.notebook = ttk.Notebook(self, bootstyle="secondary")
+        for label in ["摘要", "权利要求书", "说明书", "附图"]:
+            text_region = ScrolledText(self.notebook, autohide=True, wrap="word")
+            self.notebook.add(text_region, text=label, padding=5)
+        self.notebook.pack(fill="both", expand=True)
 
 
 class ComparisonFrame(ttk.Frame):
@@ -148,10 +167,10 @@ class ComparisonFrame(ttk.Frame):
                         ("equal",),
                     )
                 case _:
-                    self._sctext_right.insert("end", text_original[i1:i2], ("original",))
-                    self._sctext_left.insert(
-                        "end", text_modified[j1:j2], ("modified",)
+                    self._sctext_right.insert(
+                        "end", text_original[i1:i2], ("original",)
                     )
+                    self._sctext_left.insert("end", text_modified[j1:j2], ("modified",))
                     self._sctext_result.insert(
                         "end", text_original[i1:i2], (f"{tag}-original", "original")
                     )

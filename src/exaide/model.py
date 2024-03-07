@@ -81,8 +81,8 @@ class DescriptionModel:
         search_mod = SearchModel(self.description, self.fig_num_pattern)
         fig_nums = defaultdict(list)
 
-        # 如果附图中包含诸如“图1-3”这样的图号，那么说明书中查找到的复合图号，例如图4-5则不分成多个子图
         seps_pattern = "[和至或,、，]"
+        # 如果附图中不包含诸如“图1-3”这样的图号，那么说明书中查找到的复合图号，例如图4-5则分成多个子图
         if re.search(r"图[0-9a-zA-Z'()]+-[0-9a-zA-Z'()]+", self.figure_numbers) is None:
             seps_pattern = seps_pattern[:-1] + "-]"
 
@@ -106,6 +106,6 @@ class DescriptionModel:
 
     @staticmethod
     def _contains_multinumbers(match: re.Match[str]) -> bool:
-        if match.groups != () and match.groups()[-1] is not None:
+        if match.groups() != () and match.groups()[-1] is not None:
             return True
         return False
