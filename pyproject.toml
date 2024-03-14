@@ -25,3 +25,6 @@ distribution = true
 test = [
     "pytest>=7.4.4",
 ]
+gui-design = [
+    "pygubu-designer>=0.38",
+]

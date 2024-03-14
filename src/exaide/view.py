@@ -1,230 +1,286 @@
 import ttkbootstrap as ttk
-import ttkbootstrap.constants as tc
-from ttkbootstrap.scrolled import ScrolledText
 from tkinter import filedialog
 from ttkbootstrap.dialogs.dialogs import Messagebox
 
 import chardet
 
 
-class MainFrame(ttk.Frame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, padding=10, **kwargs)
+class ApplicationCheckFrame(ttk.Frame):
+    def __init__(self, master, **kwargs) -> None:
+        super().__init__(master, padding=5, **kwargs)
+        self._build_ui()
         self.pack(fill="both", expand=True)
 
-        label = ttk.Label(self, text="案件申请号:")
-        label.pack(fill="x", expand=True, padx=5, pady=5)
-
-        self.app_number = ttk.StringVar()
-        appnum_entry = ttk.Entry(self, textvariable=self.app_number)
-        appnum_entry.pack(fill="x", expand=True, padx=5, pady=5)
-
-        load_btn = ttk.Button(self, text="导入")
-        load_btn.pack(anchor="e", padx=5, pady=5)
-
-        utility_frm = ttk.LabelFrame(self, text="实用工具")
-        utility_frm.pack(fill="both", expand=True)
-
-        formal_defect_btn = ttk.Button(
-            utility_frm, text="形式缺陷查找", bootstyle="primary-link"
+    def _build_ui(self) -> None:
+        # build ui
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.left_frame = ttk.Frame(self, name="left_frame")
+        self.left_frame.configure(height=200, width=400)
+        self.application_number_label = ttk.Label(
+            self.left_frame, name="application_number_label"
         )
-        formal_defect_btn.pack(anchor="w", padx=5, pady=5)
-        comparison_btn = ttk.Button(
-            utility_frm, text="文本比较器", bootstyle="primary-link"
+        self.application_number_label.configure(text="案件申请号：")
+        self.application_number_label.grid(
+            column=0, padx=5, pady="5 0", row=0, sticky="w"
         )
-        comparison_btn.pack(anchor="w", padx=5, pady=5)
-        period_check_btn = ttk.Button(
-            utility_frm, text="审查周期查看", bootstyle="primary-link"
+        self.application_number_entry = ttk.Entry(
+            self.left_frame, name="application_number_entry"
         )
-        period_check_btn.pack(anchor="w", padx=5, pady=5)
-        case_closing_btn = ttk.Button(
-            utility_frm, text="当月结案数据", bootstyle="primary-link"
+        self.application_number_entry.grid(
+            column=0, padx=5, pady="0 3", row=1, sticky="ew"
         )
-        case_closing_btn.pack(anchor="w", padx=5, pady=5)
+        self.application_number_import_btn = ttk.Button(
+            self.left_frame, name="application_number_import_btn"
+        )
+        self.application_number_import_btn.configure(text="导入")
+        self.application_number_import_btn.grid(
+            column=0, padx=5, pady="0 5", row=2, sticky="e"
+        )
+        self.utilities_frame = ttk.Labelframe(self.left_frame, name="utilities_frame")
+        self.utilities_frame.configure(height=200, text="实用工具", width=200)
+        self.compare_btn = ttk.Button(self.utilities_frame, name="compare_btn")
+        self.compare_btn.configure(text="文本比对", command=self._show_cmp_win)
+        self.compare_btn.grid(column=0, padx=5, pady="7 5", row=0, sticky="w")
+        self.period_btn = ttk.Button(self.utilities_frame, name="period_btn")
+        self.period_btn.configure(text="周期管理")
+        self.period_btn.grid(column=0, padx=5, pady=5, row=1, sticky="w")
+        self.cases_btn = ttk.Button(self.utilities_frame, name="cases_btn")
+        self.cases_btn.configure(text="当月结案")
+        self.cases_btn.grid(column=0, padx=5, pady=5, row=2, sticky="w")
+        self.utilities_frame.grid(column=0, padx=5, pady=10, row=3, sticky="nsew")
+        self.find_setting_btn = ttk.Labelframe(self.left_frame, name="find_setting_btn")
+        self.find_setting_btn.configure(height=200, text="查找设置", width=200)
+        self.find_range_label = ttk.Label(
+            self.find_setting_btn, name="find_range_label"
+        )
+        self.find_range_label.configure(text="查找范围：")
+        self.find_range_label.grid(column=0, padx=5, pady="5 0", row=0, sticky="w")
+        self.find_range_comb = ttk.Combobox(
+            self.find_setting_btn, name="find_range_comb"
+        )
+        self.find_range_comb.configure(values=["全部", "权利要求", "说明书"])
+        self.find_range_comb.grid(column=0, padx=5, pady="0 5", row=1, sticky="w")
+        self.seg_checker = ttk.Checkbutton(self.find_setting_btn, name="seg_checker")
+        self.seg_checker.configure(text="权利要求自动分词")
+        self.seg_checker.grid(column=0, padx=5, pady="10 0", row=2, sticky="w")
+        self.seg_length_frame = ttk.Frame(
+            self.find_setting_btn, name="seg_length_frame"
+        )
+        self.seg_length_frame.configure(height=200, width=200)
+        self.seg_length_label = ttk.Label(
+            self.seg_length_frame, name="seg_length_label"
+        )
+        self.seg_length_label.configure(text="最短截词长度")
+        self.seg_length_label.grid(column=0, padx="30 5", row=0, sticky="w")
+        self.seg_length_spinbox = ttk.Spinbox(
+            self.seg_length_frame, name="seg_length_spinbox"
+        )
+        self.seg_length_spinbox.configure(width=5)
+        self.seg_length_spinbox.grid(column=1, padx="5 10", row=0, sticky="w")
+        self.seg_length_frame.grid(column=0, padx=5, row=3, sticky="w")
+        self.find_setting_btn.grid(column=0, padx=5, pady=5, row=4, sticky="nsew")
+        self.left_frame.grid(column=0, row=0, sticky="nsew")
+        self.left_frame.rowconfigure(3, weight=1)
+        self.left_frame.rowconfigure(4, weight=1)
+        self.right_frame = ttk.Frame(self, name="right_frame")
+        self.right_frame.configure(height=200, width=200)
+        self.application_pane = ttk.Notebook(self.right_frame, name="application_pane")
+        self.application_pane.configure(height=300, width=600)
+        self.abs_text = ttk.ScrolledText(self.application_pane, name="abs_text")
+        self.abs_text.configure(height=10, width=60)
+        self.abs_text.grid(column=0, row=0, sticky="nsew")
+        self.application_pane.add(self.abs_text, text="摘要")
+        self.claim_text = ttk.ScrolledText(self.application_pane, name="claim_text")
+        self.claim_text.configure(height=10, width=50)
+        self.claim_text.grid(column=0, row=0, sticky="nsew")
+        self.application_pane.add(self.claim_text, text="权利要求")
+        self.description_text = ttk.ScrolledText(
+            self.application_pane, name="description_text"
+        )
+        self.description_text.configure(height=10, width=50)
+        self.description_text.grid(column=0, row=0, sticky="nsew")
+        self.application_pane.add(self.description_text, text="说明书")
+        self.figure_text = ttk.ScrolledText(self.application_pane, name="figure_text")
+        self.figure_text.configure(height=10, width=50)
+        self.figure_text.grid(column=0, row=0, sticky="nsew")
+        self.application_pane.add(self.figure_text, text="附图图号")
+        self.application_pane.grid(column=0, padx=5, pady=5, row=1, sticky="nsew")
+        self.check_result_pane = ttk.Notebook(
+            self.right_frame, name="check_result_pane"
+        )
+        self.check_result_pane.configure(height=200, width=600)
+        self.claim_check_text = ttk.ScrolledText(
+            self.check_result_pane, name="claim_check_text"
+        )
+        self.claim_check_text.configure(height=10, width=50)
+        self.claim_check_text.grid(column=0, row=0, sticky="nsew")
+        self.check_result_pane.add(self.claim_check_text, text="权利要求")
+        self.description_check_text = ttk.ScrolledText(
+            self.check_result_pane, name="description_check_text"
+        )
+        self.description_check_text.configure(height=10, width=50)
+        self.description_check_text.grid(column=0, row=0, sticky="nsew")
+        self.check_result_pane.add(self.description_check_text, text="说明书")
+        self.others_check_text = ttk.ScrolledText(
+            self.check_result_pane, name="others_check_text"
+        )
+        self.others_check_text.configure(height=10, width=50)
+        self.others_check_text.grid(column=0, row=0, sticky="nsew")
+        self.check_result_pane.add(self.others_check_text, text="其他问题")
+        self.check_result_pane.grid(column=0, padx=5, pady="0 10", row=3, sticky="nsew")
+        self.check_result_frame = ttk.Frame(self.right_frame, name="check_result_frame")
+        self.check_result_frame.configure(height=200, width=200)
+        self.check_result_label = ttk.Label(
+            self.check_result_frame, name="check_result_label"
+        )
+        self.check_result_label.configure(text="检查结果：")
+        self.check_result_label.grid(column=0, row=0, sticky="w")
+        self.check_btn = ttk.Button(self.check_result_frame, name="check_btn")
+        self.check_btn.configure(text="清    空")
+        self.check_btn.grid(column=2, row=0)
+        self.clear_btn = ttk.Button(self.check_result_frame, name="clear_btn")
+        self.clear_btn.configure(text="查    找")
+        self.clear_btn.grid(column=1, row=0, sticky="e")
+        self.check_result_frame.grid(column=0, padx=5, pady="5 0", row=2, sticky="ew")
+        self.check_result_frame.columnconfigure(0, weight=1)
+        self.check_result_frame.columnconfigure(1, weight=1)
+        self.check_result_frame.columnconfigure(2, weight=1)
+        self.right_frame.grid(column=2, row=0, sticky="nsew")
+        self.right_frame.rowconfigure(1, weight=3)
+        self.right_frame.rowconfigure(3, weight=2)
+        self.right_frame.columnconfigure(0, weight=1)
+        self.separator1 = ttk.Separator(self, orient="vertical")
+        self.separator1.grid(column=1, row=0, sticky="ns")
+
+    def _show_cmp_win(self) -> None:
+        cmp_win = ttk.Toplevel(title="文本比较")
+        CmpFrame(cmp_win)
 
 
-class FormalDefectFrame(ttk.Frame):
+class CmpFrame(ttk.Frame):
     def __init__(self, master, **kwargs):
-        super().__init__(master, padding=10, **kwargs)
+        super().__init__(master, padding=5, **kwargs)
+        self._build_ui()
         self.pack(fill="both", expand=True)
 
-        self.notebook = ttk.Notebook(self, bootstyle="secondary")
-        for label in ["摘要", "权利要求书", "说明书", "附图"]:
-            text_region = ScrolledText(self.notebook, autohide=True, wrap="word")
-            self.notebook.add(text_region, text=label, padding=5)
-        self.notebook.pack(fill="both", expand=True)
+    @property
+    def original_content(self) -> str:
+        return self.original_text.get("1.0", "end")
 
+    @property
+    def modified_content(self) -> str:
+        return self.modified_text.get("1.0", "end")
 
-class ComparisonFrame(ttk.Frame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, padding=10, **kwargs)
-        self.pack(fill=tc.BOTH, expand=tc.YES)
+    @property
+    def cmp_result_content(self) -> str:
+        return self.cmp_result_text.get("1.0", "end")
 
-        self._build_widgets()
+    @original_content.setter
+    def original_content(self, text) -> None:
+        self.original_text.delete("1.0", "end")
+        self.original_text.insert("1.0", text)
 
-    def _build_widgets(self):
-        self.rowconfigure(1, weight=3)
-        self.rowconfigure(3, weight=1)
+    @modified_content.setter
+    def modified_content(self, text) -> None:
+        self.modified_text.delete("1.0", "end")
+        self.modified_text.insert("1.0", text)
+
+    @cmp_result_content.setter
+    def cmp_result_content(self, text) -> None:
+        self.cmp_result_text.delete("1.0", "end")
+        self.cmp_result_text.insert("1.0", text)
+
+    def _clean_text(self) -> None:
+        for txt_widget in [
+            self.original_text,
+            self.modified_text,
+            self.cmp_result_text,
+        ]:
+            txt_widget.delete("1.0", "end")
+
+    def set_compare_result(self, cmp_contents: list[tuple[str, int, int, int, int]]) -> None:
+        pass
+
+    def _build_ui(self) -> None:
+        # build ui
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(2, weight=1)
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(3, weight=1)
+        self.columnconfigure(2, weight=1)
 
-        label = "{}:\n请输入或[Ctrl+V]粘贴或点击[导入]按钮导入纯文本"
-        label_left = ttk.Label(self, text=label.format("修改文本"))
-        label_left.grid(
-            row=0,
-            column=0,
-            sticky=tc.W,
+        self.modified_frame = ttk.Frame(self, name="modified_frame")
+        self.modified_frame.configure(height=500, width=200)
+        self.modified_label = ttk.Label(self.modified_frame, name="modified_label")
+        self.modified_label.configure(
+            text="修改文本：\n请输入或Ctrl+V粘贴或点击[导入修改]按钮导入纯文本"
         )
-        label_right = ttk.Label(self, text=label.format("原始文本"))
-        label_right.grid(row=0, column=3, sticky=tc.W)
-
-        self._btn_left = ttk.Button(
-            self,
-            text="导入",
-            command=lambda title="请选择修改文本": self._open_file(title),
+        self.modified_label.grid(column=0, row=0, sticky="w")
+        self.modified_import_btn = ttk.Button(
+            self.modified_frame, name="modified_import_btn"
         )
-        self._btn_left.grid(row=0, column=1, sticky=tc.E)
-        self._btn_right = ttk.Button(
-            self,
-            text="导入",
-            command=lambda title="请选择原始文本": self._open_file(title),
+        self.modified_import_btn.configure(text="导入修改", width=9)
+        self.modified_import_btn.grid(column=1, row=0, sticky="e")
+        self.modified_text = ttk.ScrolledText(self.modified_frame, name="modified_text")
+        self.modified_text.configure(height=20, width=55)
+        self.modified_text.grid(column=0, columnspan=2, row=1, sticky="nsew")
+        self.modified_frame.grid(column=0, padx=5, pady=5, row=0, sticky="nsew")
+        self.modified_frame.rowconfigure(1, weight=1)
+        self.modified_frame.columnconfigure(0, weight=1)
+        self.modified_frame.columnconfigure(1, weight=1)
+        self.cmp_clear_frame = ttk.Frame(self, name="cmp_clear_frame")
+        self.cmp_clear_frame.configure(height=200, width=200)
+        self.cmp_btn = ttk.Button(self.cmp_clear_frame, name="cmp_btn")
+        self.cmp_btn.configure(text="比 较", width=5)
+        self.cmp_btn.grid(column=0, pady=10, row=0)
+        self.button14 = ttk.Button(self.cmp_clear_frame)
+        self.button14.configure(text="清 空", width=5)
+        self.button14.grid(column=0, pady=10, row=1)
+        self.cmp_clear_frame.grid(column=1, padx=0, pady=5, row=0)
+        self.original_frame = ttk.Frame(self, name="original_frame")
+        self.original_frame.configure(height=500, width=200)
+        self.original_label = ttk.Label(self.original_frame, name="original_label")
+        self.original_label.configure(
+            text="原始文本：\n请输入或Ctrl+V粘贴或点击[导入原始]按钮导入纯文本"
         )
-        self._btn_right.grid(row=0, column=4, sticky=tc.E)
-
-        self._sctext_left = ScrolledText(self, autohide=True, wrap="word")
-        self._sctext_left.grid(row=1, column=0, columnspan=2, sticky=tc.NSEW)
-        self._sctext_right = ScrolledText(self, autohide=True, wrap="word")
-        self._sctext_right.grid(row=1, column=3, columnspan=2, sticky=tc.NSEW)
-        self._btn_cmp = ttk.Button(
-            self,
-            text="比较",
-            bootstyle=(tc.PRIMARY, tc.OUTLINE),
-            command=self._on_compare,
+        self.original_label.grid(column=0, row=0, sticky="w")
+        self.original_import_btn = ttk.Button(
+            self.original_frame, name="original_import_btn"
         )
-        self._btn_cmp.grid(row=1, column=2, padx=3, sticky=tc.EW)
-
-        self._label_result = ttk.Label(self, text="修改对照:")
-        self._label_result.grid(row=2, column=0, sticky=tc.W)
-        self._sctext_result = ScrolledText(self, autohide=True, height=10, wrap="word")
-        self._sctext_result.grid(row=3, column=0, columnspan=5, sticky=tc.NSEW)
-
-    @property
-    def original_text(self):
-        return self._sctext_right.get("1.0", "end")
-
-    @property
-    def modified_text(self):
-        return self._sctext_left.get("1.0", "end")
-
-    @property
-    def comparison_result(self):
-        return self._sctext_result.get("1.0", "end")
-
-    @original_text.setter
-    def original_text(self, text):
-        self._sctext_right.delete("1.0", "end")
-        self._sctext_right.insert("1.0", text)
-
-    @modified_text.setter
-    def modified_text(self, text):
-        self._sctext_left.delete("1.0", "end")
-        self._sctext_left.insert("1.0", text)
-
-    @comparison_result.setter
-    def comparison_result(self, text):
-        self._sctext_result.delete("1.0", "end")
-        self._sctext_result.insert("1.0", text)
-
-    def _clean_text(self):
-        self._sctext_left.delete("1.0", "end")
-        self._sctext_right.delete("1.0", "end")
-        self._sctext_result.delete("1.0", "end")
-
-    def set_comparing_text(
-        self,
-        text_original,
-        text_modified,
-        cmp_contents: list[tuple[str, int, int, int, int]],
-    ):
-        self._clean_text()
-
-        for tag, i1, i2, j1, j2 in cmp_contents:
-            match tag:
-                case "equal":
-                    self._sctext_right.insert(
-                        "end",
-                        text_original[i1:i2],
-                        ("equal",),
-                    )
-                    self._sctext_left.insert(
-                        "end",
-                        text_modified[j1:j2],
-                        ("equal",),
-                    )
-                    self._sctext_result.insert(
-                        "end",
-                        text_original[i1:i2],
-                        ("equal",),
-                    )
-                case _:
-                    self._sctext_right.insert(
-                        "end", text_original[i1:i2], ("original",)
-                    )
-                    self._sctext_left.insert("end", text_modified[j1:j2], ("modified",))
-                    self._sctext_result.insert(
-                        "end", text_original[i1:i2], (f"{tag}-original", "original")
-                    )
-                    self._sctext_result.insert(
-                        "end", text_modified[j1:j2], (f"{tag}-modified", "modified")
-                    )
-
-        origin_color, modify_color = "red", "blue"
-        self._sctext_right.tag_configure("original", foreground=origin_color)
-        self._sctext_left.tag_configure("modified", foreground=modify_color)
-
-        for tag in (
-            "replace-original",
-            "delete-original",
-            "replace-modified",
-            "insert-modified",
-        ):
-            if tag.endswith("original"):
-                self._sctext_result.tag_configure(
-                    tag, overstrike=True, foreground=origin_color
-                )
-            elif tag.endswith("modified"):
-                self._sctext_result.tag_configure(
-                    tag, underline=True, foreground=modify_color
-                )
-
-    def get_comparing_text(self):
-        return self.original_text, self.modified_text
-
-    def _on_compare(self):
-        self.event_generate("<<Comparing>>")
-
-    def _open_file(self, title):
-        file_path = filedialog.askopenfilename(
-            title=title,
-            # parent=self,
-            filetypes=[("文本文档", ".txt"), ("所有文件", "*")],
-            defaultextension=".txt",
+        self.original_import_btn.configure(text="导入原始", width=9)
+        self.original_import_btn.grid(column=1, row=0, sticky="e")
+        self.original_text = ttk.ScrolledText(self.original_frame, name="original_text")
+        self.original_text.configure(height=20, width=55)
+        self.original_text.grid(column=0, columnspan=2, row=1, sticky="nsew")
+        self.original_frame.grid(column=2, padx=5, pady=5, row=0, sticky="nsew")
+        self.original_frame.rowconfigure(1, weight=1)
+        self.original_frame.columnconfigure(0, weight=1)
+        self.original_frame.columnconfigure(1, weight=1)
+        self.cmp_result_label = ttk.Label(self, name="cmp_result_label")
+        self.cmp_result_label.configure(text="修改对照：")
+        self.cmp_result_label.grid(
+            column=0, columnspan=3, padx=5, pady="10 3", row=1, sticky="ew"
         )
+        self.cmp_result_frame = ttk.Frame(self, name="cmp_result_frame")
+        self.cmp_result_frame.configure(height=200, width=200)
+        self.cmp_result_text = ttk.ScrolledText(
+            self.cmp_result_frame, name="cmp_result_text"
+        )
+        self.cmp_result_text.configure(height=15, width=50)
+        self.cmp_result_text.grid(column=0, row=0, sticky="nsew")
+        self.cmp_result_frame.grid(
+            column=0, columnspan=3, padx=5, pady="0 5", row=2, sticky="nsew"
+        )
+        self.cmp_result_frame.rowconfigure(0, weight=1)
+        self.cmp_result_frame.columnconfigure(0, weight=1)
 
-        with open(file_path, "rb") as f:
-            read_bytes = f.read()
-            encoding = chardet.detect(read_bytes)["encoding"]
-            try:
-                if title == "请选择原始文本":
-                    self.original_text = read_bytes.decode(encoding)
-                else:
-                    self.modified_text = read_bytes.decode(encoding)
-            except (UnicodeDecodeError, UnicodeError):
-                Messagebox.show_error(
-                    message=(
-                        f"检测到文本文档的编码格式为{encoding}，请确认\n"
-                        f"实际编码格式是否匹配{encoding}。若不匹配，请\n"
-                        "适当增加文本文档中字符数量以提高检测准确率。"
-                    ),
-                    title="文本编码错误",
-                )
+
+if __name__ == "__main__":
+    from .menu import MenuBar
+
+    win = ttk.Window(
+        title="Exaide - 审查辅助帮手",
+    )
+    ApplicationCheckFrame(win)
+    win.configure(menu=MenuBar(win))
+    win.mainloop()
