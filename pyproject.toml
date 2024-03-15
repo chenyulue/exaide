@@ -2,16 +2,14 @@
 name = "exaide"
 version = "0.1.0"
 description = "An aide for patent examination"
-authors = [
-    {name = "Chenyu Lue", email = "chenyulue@163.com"},
-]
-dependencies = [
-    "ttkbootstrap>=1.10.1",
-    "chardet>=5.2.0",
-]
+authors = [{ name = "Chenyu Lue", email = "chenyulue@163.com" }]
+dependencies = ["ttkbootstrap>=1.10.1", "chardet>=5.2.0"]
 requires-python = ">=3.11"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
+
+[project.gui-scripts]
+exaide = "exaide.__main__:main"
 
 [build-system]
 requires = ["pdm-backend"]
@@ -22,9 +20,5 @@ build-backend = "pdm.backend"
 distribution = true
 
 [tool.pdm.dev-dependencies]
-test = [
-    "pytest>=7.4.4",
-]
-gui-design = [
-    "pygubu-designer>=0.38",
-]
+test = ["pytest>=7.4.4"]
+gui-design = ["pygubu-designer>=0.38"]

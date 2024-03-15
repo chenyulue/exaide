@@ -406,6 +406,7 @@ class CmpFrame(ttk.Frame):
         self.original_import_btn.configure(
             command=lambda title="请选择原始文本": self._open_file(title),
         )
+        
         self.cmp_btn.configure(command=self._on_cmp_btn_click)
         self.clean_btn.configure(command=self._clean_text)
 
