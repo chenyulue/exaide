@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 from tkinter import filedialog
 from ttkbootstrap.dialogs.dialogs import Messagebox
 import os
+import itertools
 
 import chardet
 
@@ -138,12 +139,12 @@ class ApplicationCheckFrame(ttk.Frame):
         )
         self.check_result_label.configure(text="检查结果：")
         self.check_result_label.grid(column=0, row=0, sticky="w")
-        self.check_btn = ttk.Button(self.check_result_frame, name="check_btn")
-        self.check_btn.configure(text="清    空")
-        self.check_btn.grid(column=2, row=0)
-        self.clear_btn = ttk.Button(self.check_result_frame, name="clear_btn")
-        self.clear_btn.configure(text="查    找")
-        self.clear_btn.grid(column=1, row=0, sticky="e")
+        self.clear_btn = ttk.Button(self.check_result_frame, name="check_btn")
+        self.clear_btn.configure(text="清    空")
+        self.clear_btn.grid(column=2, row=0)
+        self.check_btn = ttk.Button(self.check_result_frame, name="clear_btn")
+        self.check_btn.configure(text="查    找")
+        self.check_btn.grid(column=1, row=0, sticky="e")
         self.check_result_frame.grid(column=0, padx=5, pady="5 0", row=2, sticky="ew")
         self.check_result_frame.columnconfigure(0, weight=1)
         self.check_result_frame.columnconfigure(1, weight=1)
@@ -155,7 +156,7 @@ class ApplicationCheckFrame(ttk.Frame):
         self.separator1 = ttk.Separator(self, orient="vertical")
         self.separator1.grid(column=1, row=0, sticky="ns")
 
-    def _config_widgets(self):
+    def _config_widgets(self) -> None:
         self.compare_btn.configure(command=self._show_cmp_win)
 
         self.find_range_var = ttk.StringVar(value="全部")
@@ -175,6 +176,22 @@ class ApplicationCheckFrame(ttk.Frame):
             increment=1,
         )
         self._toggle_seg_length_spinbox()
+
+        self.clear_btn.configure(command=self._clear_app_data)
+        self.check_btn.configure(command=self._check_defects)
+
+    def _clear_app_data(self) -> None:
+        for child in itertools.chain(
+            self.application_pane.winfo_children(),
+            self.check_result_pane.winfo_children(),
+        ):
+            text_widget = [w for s, w in child.children.items() if s.endswith("_text")][
+                0
+            ]
+            text_widget.delete("1.0", "end") # pyright: ignore
+
+    def _check_defects(self) -> None:
+        self.event_generate("<<CheckingDefects>>")
 
     def _show_cmp_win(self) -> None:
         self.event_generate("<<OpenComparingWindow>>")
@@ -227,6 +244,8 @@ class CmpFrame(ttk.Frame):
             self.cmp_result_text,
         ]:
             txt_widget.delete("1.0", "end")
+
+        self.cmp_result_label.configure(text="修改对照：")
 
     def set_compare_result(
         self, cmp_results: list[tuple[str, int, int, int, int]]
@@ -406,7 +425,7 @@ class CmpFrame(ttk.Frame):
         self.original_import_btn.configure(
             command=lambda title="请选择原始文本": self._open_file(title),
         )
-        
+
         self.cmp_btn.configure(command=self._on_cmp_btn_click)
         self.clean_btn.configure(command=self._clean_text)
 
