@@ -5,7 +5,6 @@ from . import view as v
 from . import model as m
 from . import menu
 from . import assets
-from .utilies import Color
 
 
 class Application(ttk.Window):
@@ -50,44 +49,14 @@ class Application(ttk.Window):
         sensitive_words = m.SettingModel().sensitive_words
         desc_model = self.description_model(desc_text, sensitive_words, fig_text)
 
+        for tag in self.mainwindow.description_text.tag_names():
+            self.mainwindow.description_text.tag_delete(tag)
+
         # Search sensitive words
         sensitive_words_result = desc_model.search_sensitive_words()
-        self._show_results(
-            self.mainwindow.description_check_text,
-            sensitive_words_result,
-            Color.RED,
-            "sensitive_word",
+        self.mainwindow.show_description_check_results(
+            sensitive_words=sensitive_words_result,
         )
-
-    def _show_results(
-        self, where: ttk.ScrolledText, results: m.SearchResults, color: Color, tag: str
-    ) -> None:
-        where.delete("1.0", "end")
-        if where is self.mainwindow.description_check_text:
-            where_highlight = self.mainwindow.description_text
-        elif where is self.mainwindow.claim_check_text:
-            where_highlight = self.mainwindow.claim_text
-        else:
-            where_highlight = self.mainwindow.abs_text
-        where_highlight.configure(foreground="black")
-
-        for word, positions in results.items():
-            where.insert("end", word, (word,))
-            where.insert("end", " ")
-            where.tag_bind(
-                word,
-                "<Button-1>",
-                self._find_and_jump(word, where_highlight),
-            )
-            for start, end in positions:
-                where_highlight.tag_add(tag, f"1.0+{start}c", f"1.0+{end}c")
-                where_highlight.tag_add(word, f"1.0+{start}c", f"1.0+{end}c")
-        where_highlight.tag_configure(tag, foreground=color.value)
-
-    def _find_and_jump(self, word: str, where: ttk.ScrolledText) :
-        def _event(*_):
-            print("Clicked")
-        return _event
 
     def _check_claim_defects(self):
         print("Claim defects")

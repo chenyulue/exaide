@@ -1,10 +1,14 @@
 import ttkbootstrap as ttk
 from tkinter import filedialog
 from ttkbootstrap.dialogs.dialogs import Messagebox
+from ttkbootstrap.icons import Emoji
 import os
 import itertools
 
 import chardet
+
+from . import model as m
+from .utilities import Color
 
 
 class ApplicationCheckFrame(ttk.Frame):
@@ -180,6 +184,69 @@ class ApplicationCheckFrame(ttk.Frame):
         self.clear_btn.configure(command=self._clear_app_data)
         self.check_btn.configure(command=self._check_defects)
 
+    def show_description_check_results(self, **kwargs) -> None:
+        for tag in self.description_text.tag_names():
+            self.description_text.tag_delete(tag)
+        self.description_check_text.delete("1.0", "end")
+        
+        if ("sensitive_words" in kwargs) and kwargs["sensitive_words"]:
+            self._highlight_sensitive_words(kwargs["sensitive_words"], Color.RED)
+
+    def _highlight_sensitive_words(
+        self, results: m.SearchResults, color: Color
+    ) -> None:
+        emoji = Emoji.get("closed book")
+        emoji = emoji.char if emoji is not None else ""
+        self.description_check_text.insert(
+            "end",
+            emoji + " 可能的敏感词：\n",
+            ("sensitive_words_title",),
+        )
+
+        for word, positions in results.items():
+            self.description_check_text.insert("end", word, (word,))
+            self.description_check_text.insert("end", " ")
+            self.description_check_text.tag_bind(
+                word,
+                "<Button-1>",
+                self._find_and_jump(
+                    word,
+                    positions,
+                    self.description_text,
+                ),
+            )
+
+            for start, end in positions:
+                self.description_text.tag_add(
+                    "sensitive_words", f"1.0+{start}c", f"1.0+{end}c"
+                )
+                self.description_text.tag_add(word, f"1.0+{start}c", f"1.0+{end}c")
+
+        self.description_text.tag_configure("sensitive_words", foreground=color.value)
+
+    def _find_and_jump(
+        self, word: str, pos: list[tuple[int, int]], where: ttk.ScrolledText
+    ):
+        n = 0
+
+        def _event(*_):
+            nonlocal n
+            count = len(pos)
+            current = n % count
+            where.see(f"1.0+{pos[current][1]}c")
+            if n > 0:
+                pre = (n - 1) % count
+                where.tag_remove(
+                    "current_sel", f"1.0+{pos[pre][0]}c", f"1.0+{pos[pre][1]}c"
+                )
+            where.tag_add(
+                "current_sel", f"1.0+{pos[current][0]}c", f"1.0+{pos[current][1]}c"
+            )
+            where.tag_configure("current_sel", background="yellow")
+            n += 1
+
+        return _event
+
     def _clear_app_data(self) -> None:
         for child in itertools.chain(
             self.application_pane.winfo_children(),
@@ -188,7 +255,7 @@ class ApplicationCheckFrame(ttk.Frame):
             text_widget = [w for s, w in child.children.items() if s.endswith("_text")][
                 0
             ]
-            text_widget.delete("1.0", "end") # pyright: ignore
+            text_widget.delete("1.0", "end")  # pyright: ignore
 
     def _check_defects(self) -> None:
         self.event_generate("<<CheckingDefects>>")
@@ -252,8 +319,10 @@ class CmpFrame(ttk.Frame):
     ) -> None:
         # Initialize the text highlighting state for each round of comparison
         self.cmp_result_text.delete("1.0", "end")
-        self.original_text.configure(foreground="black")
-        self.modified_text.configure(foreground="black")
+        for tag in self.original_text.tag_names():
+            self.original_text.tag_delete(tag)
+        for tag in self.modified_text.tag_names():
+            self.modified_text.tag_delete(tag)
 
         for tag, i1, i2, j1, j2 in cmp_results:
             if tag == "equal":
