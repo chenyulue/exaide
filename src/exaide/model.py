@@ -1,4 +1,4 @@
-import difflib
+import cydifflib as difflib
 import re
 from collections import defaultdict
 
@@ -6,7 +6,7 @@ from typing import Iterator, NamedTuple, TypeAlias
 
 
 # text comparison model
-class TextCompareModel(difflib.SequenceMatcher):
+class TextCompareModel(difflib.SequenceMatcher): # type: ignore
     def __init__(
         self,
         text_original: str,
