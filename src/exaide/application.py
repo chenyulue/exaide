@@ -54,8 +54,11 @@ class Application(ttk.Window):
 
         # Search sensitive words
         sensitive_words_result = desc_model.search_sensitive_words()
+        # Figure numbers
+        extra_figs_result = desc_model.search_figure_numbers()
         self.mainwindow.show_description_check_results(
             sensitive_words=sensitive_words_result,
+            figures_result=extra_figs_result,
         )
 
     def _check_claim_defects(self):

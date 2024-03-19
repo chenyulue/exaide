@@ -53,7 +53,9 @@ class SearchModel:
 
 
 # Model that represents a description of a patent
-SearchResults: TypeAlias = defaultdict[str, list[tuple[int, int]]]
+SearchResults: TypeAlias = (
+    defaultdict[str, list[tuple[int, int]]] | dict[str, list[tuple[int, int]]]
+)
 FigureNumbers: TypeAlias = tuple[SearchResults, SearchResults]
 
 
@@ -100,7 +102,12 @@ class DescriptionModel:
         for fig_match, start, end in figure_numbers_model.search():
             figure_numbers[fig_match.group(0)].append((start, end))
 
-        return fig_nums_in_desc, figure_numbers
+        diff_in_desc = set(fig_nums_in_desc) - set(figure_numbers)
+        diff_in_fig = set(figure_numbers) - set(fig_nums_in_desc)
+        return (
+            {k: v for k, v in fig_nums_in_desc.items() if k in diff_in_desc},
+            {k: v for k, v in figure_numbers.items() if k in diff_in_fig},
+        )
 
     def search_sensitive_words(self) -> SearchResults:
         search_mod = SearchModel(self.description, "|".join(self.sensitive_words))

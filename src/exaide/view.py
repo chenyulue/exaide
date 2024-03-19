@@ -184,13 +184,120 @@ class ApplicationCheckFrame(ttk.Frame):
         self.clear_btn.configure(command=self._clear_app_data)
         self.check_btn.configure(command=self._check_defects)
 
+        self.application_pane.bind(
+            "<<NotebookTabChanged>>",
+            lambda event, target=self.check_result_pane: self._sync_notebooks(
+                event, target
+            ),
+        )
+        self.check_result_pane.bind(
+            "<<NotebookTabChanged>>",
+            lambda event, target=self.application_pane: self._sync_notebooks(
+                event, target
+            ),
+        )
+        self.application_pane.configure(bootstyle="secondary")  # type: ignore
+        self.check_result_pane.configure(bootstyle="secondary")  # type: ignore
+
+    def _sync_notebooks(self, event, target: ttk.Notebook) -> None:
+        windows_path = event.widget.select().split(".")
+        trigger = windows_path[-2]
+        tab = windows_path[-1]
+        tab = 0 if tab[-1] == "e" else int(tab[-1]) - 1
+        if trigger == "application_pane":
+            if tab == 0:
+                target.select(2)
+            elif tab < 3:
+                target.select(tab - 1)
+        elif trigger == "check_result_pane":
+            if tab == 2:
+                target.select(0)
+            else:
+                target.select(tab + 1)
+
     def show_description_check_results(self, **kwargs) -> None:
         for tag in self.description_text.tag_names():
             self.description_text.tag_delete(tag)
         self.description_check_text.delete("1.0", "end")
-        
+
         if ("sensitive_words" in kwargs) and kwargs["sensitive_words"]:
             self._highlight_sensitive_words(kwargs["sensitive_words"], Color.RED)
+        if "figures_result" in kwargs:
+            self._highlight_figure_numbers(kwargs["figures_result"], Color.BLUE)
+
+    def _highlight_figure_numbers(self, fig_numbers: m.FigureNumbers, color: Color):
+        extra_in_desc, extra_in_figures = fig_numbers
+        emoji = Emoji.get("open book")
+        emoji = emoji.char if emoji is not None else ""
+        self.description_check_text.insert(
+            "end",
+            emoji + " 说明书&附图对应情况：\n",
+            ("figure_numbers_title",),
+        )
+        if (not extra_in_desc) and (not extra_in_figures):
+            self.description_check_text.insert(
+                "end",
+                "    "
+                + Emoji.get("HEAVY CHECK MARK").char  # type: ignore
+                + "说明书、附图中图号一致\n",
+            )
+        else:
+            if extra_in_figures:
+                self.description_check_text.insert(
+                    "end",
+                    "    "
+                    + Emoji.get("HEAVY EXCLAMATION MARK SYMBOL").char  # type: ignore
+                    + "附图中存在不一致图号：",
+                )
+                self._insert_search_results(
+                    extra_in_figures,
+                    color,
+                    "figure_numbers",
+                    self.description_check_text,
+                    self.figure_text,
+                )
+                self.description_check_text.insert("end", "\n")
+            if extra_in_desc:
+                self.description_check_text.insert(
+                    "end",
+                    "    "
+                    + Emoji.get("HEAVY EXCLAMATION MARK SYMBOL").char  # type: ignore
+                    + "说明书中存在不一致图号：",
+                )
+                self._insert_search_results(
+                    extra_in_desc,
+                    color,
+                    "figure_numbers",
+                    self.description_check_text,
+                    self.description_text,
+                )
+                self.description_check_text.insert("end", "\n")
+
+        self.description_check_text.insert("end", "\n")
+
+    def _insert_search_results(
+        self,
+        results: m.SearchResults,
+        color: Color,
+        tag: str,
+        where: ttk.ScrolledText,
+        bind_where: ttk.ScrolledText,
+        focus_fig: bool=False
+    ):
+        for key, values in results.items():
+            where.insert("end", key, (key,))
+            where.insert("end", ",  ")
+            where.tag_bind(
+                key,
+                "<Button-1>",
+                self._find_and_jump(key, values, bind_where),
+            )
+
+            for start, end in values:
+                bind_where.tag_add(tag, f"1.0+{start}c", f"1.0+{end}c")
+                bind_where.tag_add(key, f"1.0+{start}c", f"1.0+{end}c")
+
+        bind_where.tag_configure(tag, foreground=color.value)
 
     def _highlight_sensitive_words(
         self, results: m.SearchResults, color: Color
@@ -202,47 +309,40 @@ class ApplicationCheckFrame(ttk.Frame):
             emoji + " 可能的敏感词：\n",
             ("sensitive_words_title",),
         )
-
-        for word, positions in results.items():
-            self.description_check_text.insert("end", word, (word,))
-            self.description_check_text.insert("end", " ")
-            self.description_check_text.tag_bind(
-                word,
-                "<Button-1>",
-                self._find_and_jump(
-                    word,
-                    positions,
-                    self.description_text,
-                ),
-            )
-
-            for start, end in positions:
-                self.description_text.tag_add(
-                    "sensitive_words", f"1.0+{start}c", f"1.0+{end}c"
-                )
-                self.description_text.tag_add(word, f"1.0+{start}c", f"1.0+{end}c")
-
-        self.description_text.tag_configure("sensitive_words", foreground=color.value)
+        self._insert_search_results(
+            results,
+            color,
+            "sensitive_words",
+            self.description_check_text,
+            self.description_text,
+        )
+        self.description_check_text.insert("end", "\n\n")
 
     def _find_and_jump(
         self, word: str, pos: list[tuple[int, int]], where: ttk.ScrolledText
     ):
         n = 0
-
+        tab = where.winfo_parent().split('.')[-1]
+        tab = 0 if tab == 'e' else int(tab[-1]) - 1
         def _event(*_):
+            for tag in where.tag_names():
+                if tag != f"{word}_current_sel" and tag.endswith("current_sel"):
+                    where.tag_delete(tag)
+                    
             nonlocal n
+            self.application_pane.select(tab)
             count = len(pos)
             current = n % count
             where.see(f"1.0+{pos[current][1]}c")
             if n > 0:
                 pre = (n - 1) % count
                 where.tag_remove(
-                    "current_sel", f"1.0+{pos[pre][0]}c", f"1.0+{pos[pre][1]}c"
+                    f"{word}_current_sel", f"1.0+{pos[pre][0]}c", f"1.0+{pos[pre][1]}c"
                 )
             where.tag_add(
-                "current_sel", f"1.0+{pos[current][0]}c", f"1.0+{pos[current][1]}c"
+                f"{word}_current_sel", f"1.0+{pos[current][0]}c", f"1.0+{pos[current][1]}c"
             )
-            where.tag_configure("current_sel", background="yellow")
+            where.tag_configure(f"{word}_current_sel", background="yellow")
             n += 1
 
         return _event
