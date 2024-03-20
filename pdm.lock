@@ -5,7 +5,7 @@
 groups = ["default", "test", "dev", "gui-design"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:74a02edaded06187f27cc8e4981502ae728c6a752a4392a9dd7e5206fc639a7d"
+content_hash = "sha256:fa0f2600b68ba4bde9e33bce84ccca35e5e8faa8919e6aa50357894b0c86b6fb"
 
 [[package]]
 name = "appdirs"
@@ -132,6 +132,16 @@ files = [
     {file = "Cython-3.0.9-cp312-cp312-win_amd64.whl", hash = "sha256:1dc320a9905ab95414013f6de805efbff9e17bb5fb3b90bbac533f017bec8136"},
     {file = "Cython-3.0.9-py2.py3-none-any.whl", hash = "sha256:bf96417714353c5454c2e3238fca9338599330cf51625cdc1ca698684465646f"},
     {file = "Cython-3.0.9.tar.gz", hash = "sha256:a2d354f059d1f055d34cfaa62c5b68bc78ac2ceab6407148d47fb508cf3ba4f3"},
+]
+
+[[package]]
+name = "fast-jieba"
+version = "0.4.0"
+requires_python = ">=3.7"
+summary = "faster word segmentation tool, based on jieba_rs"
+groups = ["default"]
+files = [
+    {file = "fast_jieba-0.4.0.tar.gz", hash = "sha256:bba4087c83b2e37cc0403d46fb58551b6c1983559504526603eeef10fc595471"},
 ]
 
 [[package]]

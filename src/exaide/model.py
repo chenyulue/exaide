@@ -6,7 +6,7 @@ from typing import Iterator, NamedTuple, TypeAlias
 
 
 # text comparison model
-class TextCompareModel(difflib.SequenceMatcher): # type: ignore
+class TextCompareModel(difflib.SequenceMatcher):  # type: ignore
     def __init__(
         self,
         text_original: str,
@@ -73,7 +73,7 @@ class DescriptionModel:
         self.fig_num_pattern = r"图([0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?([和至或到,、，-][0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?)*)"
 
     def count_paragraphs(self):
-        pattern = re.compile(r"^\[[0-9]{4}\]", flags=re.MULTILINE)
+        pattern = re.compile(r"^\[?[0-9]{4}\]?", flags=re.MULTILINE)
         para_nums = pattern.findall(self.description)
         last_para_num = int(para_nums[-1][1:-1])
         assert last_para_num == len(para_nums)
@@ -123,6 +123,12 @@ class DescriptionModel:
         if match.groups() != () and match.groups()[-1] is not None:
             return True
         return False
+
+
+class ClaimModel:
+    def __init__(self, claims: str, sensitive_words: list[str] | None = None):
+        self._claims = claims
+        self._sensitive_words = list() if sensitive_words is None else sensitive_words
 
 
 class SettingModel:
