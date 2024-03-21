@@ -1,6 +1,7 @@
 import cydifflib as difflib
 import re
 from collections import defaultdict
+from dataclasses import dataclass
 
 from typing import Iterator, NamedTuple, TypeAlias
 
@@ -125,10 +126,32 @@ class DescriptionModel:
         return False
 
 
+@dataclass
+class Claim:
+    number: int
+    subject_title: str
+    content: list[str]
+
+    def __str__(self):
+        return "\n".join(self.content)
+
+
 class ClaimModel:
-    def __init__(self, claims: str, sensitive_words: list[str] | None = None):
-        self._claims = claims
+    def __init__(self, claim: str, sensitive_words: list[str] | None = None) -> None:
+        self._claim = claim
         self._sensitive_words = list() if sensitive_words is None else sensitive_words
+
+    def split_claims(self) -> list[Claim]:
+        claim_pattern = re.compile(r"([0-9]{1,3})[.、]\s*([^，]+)，.+")
+        claims = list()
+        for line in self._claim.split("\n"):
+            m = claim_pattern.match(line)
+            if m is not None:  # A new claim begins
+                claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
+            else:
+                claims[-1].content.append(line)
+
+        return claims
 
 
 class SettingModel:
