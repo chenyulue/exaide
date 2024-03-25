@@ -142,14 +142,24 @@ class ClaimModel:
         self._sensitive_words = list() if sensitive_words is None else sensitive_words
 
     def split_claims(self) -> list[Claim]:
-        claim_pattern = re.compile(r"([0-9]{1,3})[.、]\s*([^，]+)，.+")
+        # claim_pattern = re.compile(r"([0-9]{1,3})[.、]\s*([^，]+)，.+")
+        # claims = list()
+        # for line in self._claim.split("\n"):
+        #     m = claim_pattern.match(line)
+        #     if m is not None:  # A new claim begins
+        #         claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
+        #     else:
+        #         claims[-1].content.append(line)
+        claim_num = r"^([0-9]{1,3})[.、]\s*([^，]+)，.+$"
+        claim_line = r"^.+$"
+        claim_pattern = re.compile(f"{claim_num}|{claim_line}", re.MULTILINE)
+        claim_num_p = re.compile(claim_num, re.MULTILINE)
         claims = list()
-        for line in self._claim.split("\n"):
-            m = claim_pattern.match(line)
-            if m is not None:  # A new claim begins
+        for m in claim_pattern.finditer(self._claim):
+            if claim_num_p.fullmatch(m.group(0), re.MULTILINE) is not None:
                 claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
             else:
-                claims[-1].content.append(line)
+                claims[-1].content.append(m.group(0))
 
         return claims
 
