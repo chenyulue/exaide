@@ -167,3 +167,4 @@ class ClaimModel:
 class SettingModel:
     def __init__(self):
         self.sensitive_words: list[str] = ["编撰", "王总"]
+        self.fignum_pattern: str = r"图\s*([0-9]+[a-zA-Z']*(\([0-9a-zA-Z']+\))?([和至或到,、，-][0-9]+[a-zA-Z']*(\([0-9a-zA-Z']*\))?)*)"
