@@ -15,9 +15,16 @@ def test_search(search_model):
     assert isinstance(results, Iterator)
     assert [(match.group(0), start, end) for match, start, end in results] == [("ell", 1, 4), ("ell", 14, 17)]
 
-def test_fignum_pattern():
-    fignums = [
-        "图1", "图12", "图 23", "图1、2和4", 
-    ]
-    fignum_p = m.SearchModel("\n".join(fignums), m.SettingModel().fignum_pattern)
-    assert set(s.replace(' ', '').replace('图','') for s in fignums) == set(m.match.group(1) for m in fignum_p.search())
+@pytest.mark.parametrize(
+    "text, expected",
+    [("这是图1。", {"图1"}), 
+     ("说明书中有图12和图 1A", {"图12", "图 1A"}),
+     ("图1(4)是一个子图，图1()不是", {"图1(4)", "图1"}),
+     ("(图1(4a'))在括号中", {"图1(4a')"}),
+     ("连续图号图 1A、45，78a'和99(b)", {"图 1A、45，78a'和99(b)"}),
+     ("连字号图4-9、图5或6、图8至9A，以及图9到10", {"图4-9", "图5或6", "图8至9A", "图9到10"}),
+     ("图9到图10有两个图号", {"图9", "图10"})]
+)
+def test_fignum_pattern(text, expected):
+    fignum = m.SearchModel(text, m.SettingModel().fignum_pattern)
+    assert expected == set(m.match.group(0) for m in fignum.search())

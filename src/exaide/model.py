@@ -2,6 +2,7 @@ import cydifflib as difflib
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum
 
 from typing import Iterator, NamedTuple, TypeAlias
 
@@ -136,32 +137,47 @@ class Claim:
         return "\n".join(self.content)
 
 
+class DependenciesNumber(Enum):
+    ZERO = "independent claim"
+    ONE = "citing one claim"
+    TWO = "citing two claims"
+    MORE_THAN_TWO = "citing more than two claims"
+
+
 class ClaimModel:
     def __init__(self, claim: str, sensitive_words: list[str] | None = None) -> None:
         self._claim = claim
         self._sensitive_words = list() if sensitive_words is None else sensitive_words
 
     def split_claims(self) -> list[Claim]:
-        # claim_pattern = re.compile(r"([0-9]{1,3})[.、]\s*([^，]+)，.+")
-        # claims = list()
-        # for line in self._claim.split("\n"):
-        #     m = claim_pattern.match(line)
-        #     if m is not None:  # A new claim begins
-        #         claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
-        #     else:
-        #         claims[-1].content.append(line)
         claim_num = r"^([0-9]{1,3})[.、]\s*([^，]+)，.+$"
         claim_line = r"^.+$"
         claim_pattern = re.compile(f"{claim_num}|{claim_line}", re.MULTILINE)
-        claim_num_p = re.compile(claim_num, re.MULTILINE)
+        claim_num_pattern = re.compile(claim_num, re.MULTILINE)
         claims = list()
         for m in claim_pattern.finditer(self._claim):
-            if claim_num_p.fullmatch(m.group(0), re.MULTILINE) is not None:
+            if claim_num_pattern.fullmatch(m.group(0)):
                 claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
-            else:
+            elif claims:
                 claims[-1].content.append(m.group(0))
 
         return claims
+
+    @staticmethod
+    def get_dependencies_list(
+        subject_title: str,
+    ) -> tuple[list[int], DependenciesNumber | None]:
+        number = r"([0-9]{1,3})([至~-]([0-9]{1,3})(任一项)?|或([0-9]{1,3}))?"
+        m = re.search(number, subject_title)
+        if m is None:
+            return list(), DependenciesNumber.ZERO
+        elif m.group(3) is not None:
+            one_of = None if m.group(4) is None else DependenciesNumber.MORE_THAN_TWO
+            return list(range(int(m.group(1)), int(m.group(3)) + 1)), one_of
+        elif m.group(5) is not None:
+            return [int(m.group(1)), int(m.group(5))], DependenciesNumber.TWO
+        else:
+            return [int(m.group(1))], DependenciesNumber.ONE
 
 
 class SettingModel:

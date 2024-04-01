@@ -2,7 +2,10 @@ import pytest
 import ttkbootstrap as ttk
 
 #from exaide import model as m
-
+def pytest_collection_modifyitems(items):
+    for item in items:
+        item.name = item.name.encode("utf-8").decode("unicode_escape")
+        item._nodeid = item.nodeid.encode("utf-8").decode("unicode_escape")
 
 @pytest.fixture()
 def root():
@@ -11,7 +14,8 @@ def root():
 
 @pytest.fixture()
 def claim():
-    return """1.一种具有栅偏压补偿的MOS晶体管电路，其特征在于，至少包括：
+    return """1.
+一种具有栅偏压补偿的MOS晶体管电路，其特征在于，至少包括：
 电阻器元件；
 MOS半导体组件，包括第一MOS半导体元件和第二MOS半导体元件；
 其中，所述电阻器元件与所述第一MOS半导体元件串联连接，所述第二MOS半导体元件通过栅极与所述电阻器元件和所述第一MOS半导体元件连接。
