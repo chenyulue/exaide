@@ -1,8 +1,8 @@
 import cydifflib as difflib
+import fast_jieba as jieba
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
 
 from typing import Iterator, NamedTuple, TypeAlias
 
@@ -42,9 +42,9 @@ class SearchResult(NamedTuple):
 
 
 class SearchModel:
-    def __init__(self, content: str, pattern: str, *kwargs: re.RegexFlag):
+    def __init__(self, content: str, pattern: str, **kwargs: re.RegexFlag):
         self._content = content
-        self._pattern = re.compile(pattern, *kwargs)
+        self._pattern = re.compile(pattern, **kwargs)
 
     def search(self) -> Iterator[SearchResult]:
         match = self._pattern.search(self._content, 0)
@@ -72,7 +72,7 @@ class DescriptionModel:
         self.figure_numbers = "" if figure_numbers is None else figure_numbers
         self.sensitive_words = sensitive_words
 
-        self.fig_num_pattern = r"图([0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?([和至或到,、，-][0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?)*)"
+        self.fig_num_pattern = r"图\s*([0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?([和至或到,、，-][0-9]+[a-zA-Z']*\(?[0-9a-zA-Z']*\)?)*)"
 
     def count_paragraphs(self):
         pattern = re.compile(r"^\[?[0-9]{4}\]?", flags=re.MULTILINE)
@@ -131,56 +131,92 @@ class DescriptionModel:
 class Claim:
     number: int
     subject_title: str
-    content: list[str]
-
-    def __str__(self):
-        return "\n".join(self.content)
+    content: str
+    range: tuple[int, int]
 
 
-class DependenciesNumber(Enum):
-    ZERO = "independent claim"
-    ONE = "citing one claim"
-    TWO = "citing two claims"
-    MORE_THAN_TWO = "citing more than two claims"
+@dataclass
+class ClaimIssue:
+    # check dependencies
+    claim: Claim
+    dependencies: list[int]
+    is_multidependent: bool
+    in_selected_form: bool | None = None
+    # check subordination
+    is_subordinate: bool | None = None
 
 
 class ClaimModel:
     def __init__(self, claim: str, sensitive_words: list[str] | None = None) -> None:
         self._claim = claim
         self._sensitive_words = list() if sensitive_words is None else sensitive_words
+        self.claim_issues: dict[int, ClaimIssue] = {}
+        self.check_dependencies()
 
-    def split_claims(self) -> list[Claim]:
-        claim_num = r"^([0-9]{1,3})[.、]\s*([^，]+)，.+$"
-        claim_line = r"^.+$"
-        claim_pattern = re.compile(f"{claim_num}|{claim_line}", re.MULTILINE)
-        claim_num_pattern = re.compile(claim_num, re.MULTILINE)
-        claims = list()
+    def split_claims(self) -> Iterator[Claim]:
+        claim_pattern = re.compile(
+            r"(?P<first_line>^(?P<claim_num>[0-9]{1,3})[.、]\s*(?P<subject_title>[^，]+)，.+)(?P<other_lines>(.|\n(?![0-9]{1,3}[.、]|$))*)",
+            re.MULTILINE,
+        )
         for m in claim_pattern.finditer(self._claim):
-            if claim_num_pattern.fullmatch(m.group(0)):
-                claims.append(Claim(int(m.group(1)), m.group(2), [m.group(0)]))
-            elif claims:
-                claims[-1].content.append(m.group(0))
+            yield (
+                Claim(
+                    int(m.group("claim_num")),
+                    m.group("subject_title"),
+                    m.group(0),
+                    m.span(),
+                )
+            )
 
-        return claims
+    def check_dependencies(self) -> None:
+        claims = self.split_claims()
+        dep_pattern = re.compile(
+            r"^[0-9]{1,3}\s*.*?(?P<claim>权利要?求?)(?P<first_num>[0-9]{1,3})"
+            r"(([至~-](?P<end_num>[0-9]{1,3})(?P<one_of>任一项|任一)?)|(?P<or_num>(或[0-9]{1,3})+))?"
+            r"(所述)?的?.+$",
+            re.X,
+        )
+        for i, claim in enumerate(claims):
+            m = dep_pattern.match(claim.content)
+            if m is None:
+                self.claim_issues[i + 1] = ClaimIssue(claim, [], False, None, False)
+            elif m.group("end_num") is not None:
+                start = int(m.group("first_num"))
+                end = int(m.group("end_num"))
+                deps = list(range(start, end + 1))
+                self.claim_issues[i + 1] = ClaimIssue(
+                    claim, deps, True, m.group("one_of") is not None, None
+                )
+            elif m.group("or_num") is not None:
+                deps = m.group("first_num") + m.group("or_num")
+                deps_int = [int(i) for i in deps.split("或")]
+                self.claim_issues[i + 1] = ClaimIssue(claim, deps_int, True, True, None)
+            else:
+                deps = [int(m.group("first_num"))]
+                self.claim_issues[i + 1] = ClaimIssue(claim, deps, False, True, None)
 
-    @staticmethod
-    def get_dependencies_list(
-        subject_title: str,
-    ) -> tuple[list[int], DependenciesNumber | None]:
-        number = r"([0-9]{1,3})([至~-]([0-9]{1,3})(任一项)?|或([0-9]{1,3}))?"
-        m = re.search(number, subject_title)
-        if m is None:
-            return list(), DependenciesNumber.ZERO
-        elif m.group(3) is not None:
-            one_of = None if m.group(4) is None else DependenciesNumber.MORE_THAN_TWO
-            return list(range(int(m.group(1)), int(m.group(3)) + 1)), one_of
-        elif m.group(5) is not None:
-            return [int(m.group(1)), int(m.group(5))], DependenciesNumber.TWO
+    def _is_subordinate(self, claim_number: int) -> tuple[bool, list[int]]:
+        if self.claim_issues[claim_number].dependencies == []:
+            return False, []
         else:
-            return [int(m.group(1))], DependenciesNumber.ONE
+            subject_word = jieba.cut(
+                self.claim_issues[claim_number].claim.subject_title
+            )[-1]
+            same_subjects = []
+            diff_subjects = []
+            for dep in self.claim_issues[claim_number].dependencies:
+                subject_title = self.claim_issues[dep].claim.subject_title
+                if subject_title.endswith(subject_word):
+                    same_subjects.append(dep)
+                else:
+                    diff_subjects.append(dep)
+            return (len(same_subjects) >= len(diff_subjects)), diff_subjects
+
+    def check_subordination(self) -> None:
+        pass
 
 
 class SettingModel:
     def __init__(self):
         self.sensitive_words: list[str] = ["编撰", "王总"]
-        self.fignum_pattern: str = r"图\s*([0-9]+[a-zA-Z']*(\([0-9a-zA-Z']+\))?([和至或到,、，-][0-9]+[a-zA-Z']*(\([0-9a-zA-Z']*\))?)*)"
+        self.fignum_pattern = r"图\s*([0-9a-zA-Z']+([(（][0-9a-zA-Z']*[）)])?(\s*[和至到及或,，、~-]\s*([0-9a-zA-Z']+([(（][0-9a-zA-Z']*[）)])?|([(（][0-9a-zA-Z']*[）)])))*)"
