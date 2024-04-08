@@ -37,11 +37,11 @@ class Sidebar(ctk.CTkFrame):
             pady=0,
         )
 
-        self.appnum_var = tk.StringVar()
+        # self.appnum_var = tk.StringVar(value="请输入申请号")
         self._appnum_entry = ctk.CTkEntry(
             self,
             placeholder_text="请输入申请号",
-            textvariable=self.appnum_var,
+            # textvariable=self.appnum_var,
             placeholder_text_color="gray",
         )
 
