@@ -18,7 +18,7 @@ def test_split_claims(claim_model):
     assert isinstance(claim_iter, Iterator)
 
     claim_items = list(claim_iter)
-    assert len(claim_items) == 9
+    assert len(claim_items) == 10
     assert claim_items[1] == m.Claim(
         2,
         "根据权利要求1所述的MOS晶体管电路",
@@ -46,20 +46,23 @@ def test_split_claims(claim_model):
     )
 
 
-def test_check_dependencies(claim_model):
-    claim_model.check_dependencies()
-    expected = {
-        1: [],
-        2: [1],
-        3: [1, 2],
-        4: [3],
-        5: [1, 2],
-        6: [5],
-        7: [1, 2, 3, 4, 5, 6],
-        8: [7],
-        9: [1,2,3,4,5,6,7,8],
-    }
-    assert {k: v.dependencies for k, v in claim_model.claim_issues.items()} == expected
+@pytest.mark.parametrize(
+    "num, expected",
+    [
+        (1, []),
+        (2, [1]),
+        (3, [1, 2]),
+        (4, [3]),
+        (5, [1, 2]),
+        (6, [5]),
+        (7, [1, 2, 3, 4, 5, 6]),
+        (8, [7]),
+        (9, [1, 2, 3, 4, 5, 6, 7, 8]),
+        (10, [9]),
+    ],
+)
+def test_check_dependencies(claim_model, num, expected):
+    assert claim_model.claims[num].direct_dependencies == expected
 
 
 @pytest.mark.parametrize(
@@ -68,17 +71,17 @@ def test_check_dependencies(claim_model):
         (1, []),
         (2, [1]),
         (3, [1, 2]),
-        (4, [1,2,3]),
-        (5, [1,2]),
-        (6, [1,2,5]),
-        (7, [1,2,3,4,5,6]),
-        (8, [1,2,3,4,5,6,7]),
-        (9, [1,2,3,4,5,6,7,8])
+        (4, [1, 2, 3]),
+        (5, [1, 2]),
+        (6, [1, 2, 5]),
+        (7, [1, 2, 3, 4, 5, 6]),
+        (8, [1, 2, 3, 4, 5, 6, 7]),
+        (9, [1, 2, 3, 4, 5, 6, 7, 8]),
     ],
 )
 def test_get_full_deps_path(claim_model, num, expected):
-    claim_model.check_dependencies()
     assert claim_model._get_full_deps_path(num) == expected
+
 
 @pytest.mark.parametrize(
     "num, expected",
@@ -88,8 +91,26 @@ def test_get_full_deps_path(claim_model, num, expected):
         (5, True),
         (8, True),
         (9, False),
-    ]
+        (10, True),
+    ],
 )
 def test_is_subordinate(claim_model, num, expected):
-    claim_model.check_dependencies()
-    assert claim_model._is_subordinate(num) == expected
+    assert claim_model._is_subordinate(num)[0] == expected
+
+
+@pytest.mark.parametrize(
+    "num, expected",
+    [
+        (1, []),
+        (2, [1]),
+        (5, [1, 2]),
+        (9, []),
+        (10, [9]),
+    ],
+)
+def test_get_actual_deps_path(claim_model, num, expected):
+    assert claim_model._get_actual_deps_path(num) == expected
+
+
+def test_claim2_field(claim_model):
+    assert claim_model.claims[10].actual_dependencies == [9]

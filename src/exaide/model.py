@@ -3,6 +3,7 @@ import fast_jieba as jieba
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+import itertools
 
 from typing import Iterator, NamedTuple, TypeAlias
 
@@ -133,25 +134,32 @@ class Claim:
     subject_title: str
     content: str
     range: tuple[int, int]
+    direct_dependencies: list[int] | None = None
+    in_selected_form: bool | None = None
+    is_subordinate: bool | None = None
+    full_dependencies: list[int] | None = None
+    actual_dependencies: list[int] | None = None
 
 
 @dataclass
 class ClaimIssue:
-    # check dependencies
-    claim: Claim
-    dependencies: list[int]
-    is_multidependent: bool
-    in_selected_form: bool | None = None
-    # check subordination
-    is_subordinate: bool | None = None
+    multiple_subordinate_as_basis: defaultdict[int, list[int]]|None = None
+    subordinate_not_in_selected_form: list[int]|None = None
+    subject_title_not_consistent: list[int]|None = None
+    quotes_self_or_postclaim: defaultdict[int, list[int]]|None = None
+    
 
 
 class ClaimModel:
     def __init__(self, claim: str, sensitive_words: list[str] | None = None) -> None:
         self._claim = claim
         self._sensitive_words = list() if sensitive_words is None else sensitive_words
-        self.claim_issues: dict[int, ClaimIssue] = {}
+        self.claim_issue = ClaimIssue()
+        self.claims: dict[int, Claim] = {
+            k: v for k, v in zip(itertools.count(1), self.split_claims())
+        }
         self.check_dependencies()
+        self.check_subordination()
 
     def split_claims(self) -> Iterator[Claim]:
         claim_pattern = re.compile(
@@ -179,56 +187,77 @@ class ClaimModel:
         for i, claim in enumerate(claims):
             m = dep_pattern.match(claim.content)
             if m is None:
-                self.claim_issues[i + 1] = ClaimIssue(claim, [], False, None, False)
+                self.claims[i + 1].direct_dependencies = []
             elif m.group("end_num") is not None:
                 start = int(m.group("first_num"))
                 end = int(m.group("end_num"))
                 deps = list(range(start, end + 1))
-                self.claim_issues[i + 1] = ClaimIssue(
-                    claim, deps, True, m.group("one_of") is not None, None
-                )
+                self.claims[i + 1].direct_dependencies = deps
+                self.claims[i + 1].in_selected_form = m.group("one_of") is not None
             elif m.group("or_num") is not None:
-                deps = m.group("first_num") + m.group("or_num")
-                deps_int = [int(i) for i in deps.split("或")]
-                self.claim_issues[i + 1] = ClaimIssue(claim, deps_int, True, True, None)
+                deps_txt = m.group("first_num") + m.group("or_num")
+                deps = [int(i) for i in deps_txt.split("或")]
+                self.claims[i + 1].direct_dependencies = deps
+                self.claims[i + 1].in_selected_form = True
             else:
                 deps = [int(m.group("first_num"))]
-                self.claim_issues[i + 1] = ClaimIssue(claim, deps, False, True, None)
+                self.claims[i + 1].direct_dependencies = deps
+                self.claims[i + 1].in_selected_form = True
 
-    def _is_subordinate(self, claim_number: int) -> bool:
-        sub_title = self.claim_issues[claim_number].claim.subject_title
+    def check_subordination(self) -> None:
+        for num, item in self.claims.items():
+            item.is_subordinate, item.full_dependencies = self._is_subordinate(num)
+            item.actual_dependencies = self._get_actual_deps_path(num)
+
+    def _is_subordinate(self, claim_number: int) -> tuple[bool, list[int]]:
+        sub_title = self.claims[claim_number].subject_title
         full_deps = self._get_full_deps_path(claim_number)
         pattern = re.compile(r"权利要?求?[0-9]{0,3}")
         if full_deps == []:
-            return False
+            return False, full_deps
         elif pattern.search(sub_title) is None:
-            return False
+            return False, full_deps
         else:
             root_claim_num = full_deps[0]
-            root_sub_words = jieba.cut(self.claim_issues[root_claim_num].claim.subject_title)
+            root_sub_words = jieba.cut(self.claims[root_claim_num].subject_title)
             current_sub_words = jieba.cut(sub_title)
             if root_sub_words[-1] == current_sub_words[-1]:
-                return True
+                return True, full_deps
             elif root_sub_words[-1] not in current_sub_words:
-                return True
+                return True, full_deps
             else:
-                return False
-        
+                return False, full_deps
 
     def _get_full_deps_path(self, claim_number: int) -> list[int]:
+        if self.claims[claim_number].direct_dependencies is None:
+            raise RuntimeError(
+                "The direct dependencies are None. Please run `ClaimModel.check_dependencies` first."
+            )
+
         def _get_full_deps_path(claim_number: int) -> list[int]:
             deps_path = []
-            if self.claim_issues[claim_number].dependencies == []:
+            if self.claims[claim_number].direct_dependencies == []:
                 return deps_path
             else:
-                deps_path.extend(self.claim_issues[claim_number].dependencies)
-                for dep in self.claim_issues[claim_number].dependencies:
+                deps_path.extend(self.claims[claim_number].direct_dependencies)  # type: ignore
+                for dep in self.claims[claim_number].direct_dependencies:  # type: ignore
                     deps_path.extend(_get_full_deps_path(dep))
                 return deps_path
+
         return sorted(set(_get_full_deps_path(claim_number)))
 
-    def check_subordination(self) -> None:
-        pass
+    def _get_actual_deps_path(self, claim_number: int) -> list[int]:
+        def _get_actual_deps(claim_number: int) -> list[int]:
+            deps_path = []
+            if not self.claims[claim_number].is_subordinate:
+                return deps_path
+            else:
+                deps_path.extend(self.claims[claim_number].direct_dependencies)  # type: ignore
+                for dep in self.claims[claim_number].direct_dependencies:  # type: ignore
+                    deps_path.extend(_get_actual_deps(dep))
+                return deps_path
+
+        return sorted(set(_get_actual_deps(claim_number)))
 
 
 class SettingModel:
