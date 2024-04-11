@@ -143,11 +143,10 @@ class Claim:
 
 @dataclass
 class ClaimIssue:
-    multiple_subordinate_as_basis: defaultdict[int, list[int]]|None = None
-    subordinate_not_in_selected_form: list[int]|None = None
-    subject_title_not_consistent: list[int]|None = None
-    quotes_self_or_postclaim: defaultdict[int, list[int]]|None = None
-    
+    multiple_subordinate_as_basis: defaultdict[int, list[int]] | None = None
+    subordinate_not_in_selected_form: list[int] | None = None
+    subject_title_not_consistent: defaultdict[int, list[int]] | None = None
+    quotes_self_or_postclaim: defaultdict[int, list[int]] | None = None
 
 
 class ClaimModel:
@@ -160,6 +159,7 @@ class ClaimModel:
         }
         self.check_dependencies()
         self.check_subordination()
+        self.check_claims_defects()
 
     def split_claims(self) -> Iterator[Claim]:
         claim_pattern = re.compile(
@@ -258,6 +258,39 @@ class ClaimModel:
                 return deps_path
 
         return sorted(set(_get_actual_deps(claim_number)))
+
+    def check_claims_defects(self):
+        for num, claim in self.claims.items():
+            if claim.is_subordinate:
+                if self.claim_issue.multiple_subordinate_as_basis is None:
+                    self.claim_issue.multiple_subordinate_as_basis = defaultdict(list)
+                if len(claim.direct_dependencies) > 1:  # type: ignore
+                    for dep in claim.direct_dependencies: # type: ignore
+                        if len(self.claims[dep].direct_dependencies) > 1: # type: ignore
+                            self.claim_issue.multiple_subordinate_as_basis[num].append(dep)
+
+                if self.claim_issue.subject_title_not_consistent is None:
+                    self.claim_issue.subject_title_not_consistent = defaultdict(list)
+                root_num = claim.actual_dependencies[0]  # type: ignore
+                root_title = jieba.cut(self.claims[root_num].subject_title)[-1]
+                current_title = jieba.cut(claim.subject_title)[-1]
+                if root_title != current_title:
+                    self.claim_issue.subject_title_not_consistent[root_num].append(num)
+
+            if self.claim_issue.quotes_self_or_postclaim is None:
+                self.claim_issue.quotes_self_or_postclaim = defaultdict(list)
+            for dep in claim.direct_dependencies:  # type: ignore
+                if dep >= num:
+                    self.claim_issue.quotes_self_or_postclaim[num].append(dep)
+                
+            if self.claim_issue.subordinate_not_in_selected_form is None:
+                self.claim_issue.subordinate_not_in_selected_form = []
+            if claim.in_selected_form is not None and (not claim.in_selected_form):
+                self.claim_issue.subordinate_not_in_selected_form.append(num)
+
+        for field in self.claim_issue.__dataclass_fields__.keys():
+            if not self.claim_issue.__getattribute__(field):
+                self.claim_issue.__setattr__(field, None)
 
 
 class SettingModel:

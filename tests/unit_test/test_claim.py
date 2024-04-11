@@ -114,3 +114,9 @@ def test_get_actual_deps_path(claim_model, num, expected):
 
 def test_claim2_field(claim_model):
     assert claim_model.claims[10].actual_dependencies == [9]
+
+
+def test_check_claim_defect(claim_model):
+    assert claim_model.claim_issue == m.ClaimIssue(
+        multiple_subordinate_as_basis={7: [3, 5]},  # type: ignore
+    )

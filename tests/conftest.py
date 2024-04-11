@@ -30,6 +30,10 @@ MOS半导体组件，包括第一MOS半导体元件和第二MOS半导体元件�
 10. 根据权利要求9所述的制备方法，其特征在于：工艺是湿法刻蚀。
 """
 
+@pytest.fixture()
+def claims():
+    return []
+
 
 @pytest.fixture()
 def desc():
