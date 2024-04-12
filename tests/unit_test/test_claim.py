@@ -112,11 +112,21 @@ def test_get_actual_deps_path(claim_model, num, expected):
     assert claim_model._get_actual_deps_path(num) == expected
 
 
-def test_claim2_field(claim_model):
-    assert claim_model.claims[10].actual_dependencies == [9]
+def test_get_actual_deps_with_other_sample(claims):
+    cm = m.ClaimModel(claims[0])
+    assert cm.claims[6].actual_dependencies == [7]
+    assert cm.claims[7].actual_dependencies == []
+    assert cm.claims[6].full_dependencies == [7]
 
 
-def test_check_claim_defect(claim_model):
+def test_check_claim_defect(claim_model, claims):
     assert claim_model.claim_issue == m.ClaimIssue(
         multiple_subordinate_as_basis={7: [3, 5]},  # type: ignore
+    )
+    cm = m.ClaimModel(claims[0])
+    assert cm.claim_issue == m.ClaimIssue(
+        multiple_subordinate_as_basis={5: [3]},  # type: ignore
+        subordinate_not_in_selected_form=[5, 7],
+        subject_title_not_consistent={1: [10], 7: [6, 8]},  # type: ignore
+        quotes_self_or_postclaim={6: [7]},   # type: ignore
     )

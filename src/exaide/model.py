@@ -241,7 +241,9 @@ class ClaimModel:
             else:
                 deps_path.extend(self.claims[claim_number].direct_dependencies)  # type: ignore
                 for dep in self.claims[claim_number].direct_dependencies:  # type: ignore
-                    deps_path.extend(_get_full_deps_path(dep))
+                    deps_path.extend(
+                        _get_full_deps_path(dep) if dep < claim_number else [dep]
+                    )
                 return deps_path
 
         return sorted(set(_get_full_deps_path(claim_number)))
@@ -265,9 +267,11 @@ class ClaimModel:
                 if self.claim_issue.multiple_subordinate_as_basis is None:
                     self.claim_issue.multiple_subordinate_as_basis = defaultdict(list)
                 if len(claim.direct_dependencies) > 1:  # type: ignore
-                    for dep in claim.direct_dependencies: # type: ignore
-                        if len(self.claims[dep].direct_dependencies) > 1: # type: ignore
-                            self.claim_issue.multiple_subordinate_as_basis[num].append(dep)
+                    for dep in claim.direct_dependencies:  # type: ignore
+                        if len(self.claims[dep].direct_dependencies) > 1:  # type: ignore
+                            self.claim_issue.multiple_subordinate_as_basis[num].append(
+                                dep
+                            )
 
                 if self.claim_issue.subject_title_not_consistent is None:
                     self.claim_issue.subject_title_not_consistent = defaultdict(list)
@@ -282,7 +286,7 @@ class ClaimModel:
             for dep in claim.direct_dependencies:  # type: ignore
                 if dep >= num:
                     self.claim_issue.quotes_self_or_postclaim[num].append(dep)
-                
+
             if self.claim_issue.subordinate_not_in_selected_form is None:
                 self.claim_issue.subordinate_not_in_selected_form = []
             if claim.in_selected_form is not None and (not claim.in_selected_form):
@@ -291,6 +295,18 @@ class ClaimModel:
         for field in self.claim_issue.__dataclass_fields__.keys():
             if not self.claim_issue.__getattribute__(field):
                 self.claim_issue.__setattr__(field, None)
+
+    def check_sensitive_words(self) -> SearchResults:
+        search_mod = SearchModel(self._claim, "|".join(self._sensitive_words))
+        sensitive_words = defaultdict(list)
+
+        for word_match, start, end in search_mod.search():
+            sensitive_words[word_match.group(0)].append((start, end))
+
+        return sensitive_words
+
+    def check_citation_basis(self, length: int):
+        pass
 
 
 class SettingModel:
